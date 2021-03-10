@@ -43,8 +43,7 @@ namespace Microsoft.Teams.Apps.Timesheet.ModelMappers
         /// </summary>
         /// <param name="project">The project entity model.</param>
         /// <param name="timesheets">Collection of timesheet entity model.</param>
-        /// <param name="members">List of project members.</param>
         /// <returns>Returns a project utilization view entity model.</returns>
-        ProjectUtilizationDTO MapForProjectUtilizationViewModel(Project project, IEnumerable<TimesheetEntity> timesheets, IEnumerable<Member> members);
+        ProjectUtilizationDTO MapForProjectUtilizationViewModel(Project project, IEnumerable<TimesheetEntity> timesheets);
     }
 }

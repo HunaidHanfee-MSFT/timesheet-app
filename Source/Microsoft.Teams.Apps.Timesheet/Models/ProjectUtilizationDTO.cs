@@ -23,38 +23,18 @@ namespace Microsoft.Teams.Apps.Timesheet.Models
         public string Title { get; set; }
 
         /// <summary>
-        /// Gets or sets utilized billable hours of project.
+        /// Gets or sets billable hours of project.
         /// </summary>
-        public int BillableUtilizedHours { get; set; }
+        public int BillableHours { get; set; }
 
         /// <summary>
-        /// Gets or sets  utilized non-billable hours of project.
+        /// Gets or sets non billable hours of project.
         /// </summary>
-        public int NonBillableUtilizedHours { get; set; }
+        public int NonBillableHours { get; set; }
 
         /// <summary>
-        /// Gets or sets underutilized billable hours of project.
+        /// Gets or sets not utilized hours of project.
         /// </summary>
-        public int BillableUnderutilizedHours { get; set; }
-
-        /// <summary>
-        /// Gets or sets underutilized non-billable hours of project.
-        /// </summary>
-        public int NonBillableUnderutilizedHours { get; set; }
-
-        /// <summary>
-        /// Gets or sets start date of the project.
-        /// </summary>
-        public DateTime ProjectStartDate { get; set; }
-
-        /// <summary>
-        /// Gets or sets end date of the project.
-        /// </summary>
-        public DateTime ProjectEndDate { get; set; }
-
-        /// <summary>
-        /// Gets or sets total hours of project.
-        /// </summary>
-        public int TotalHours { get; set; }
+        public int NotUtilizedHours { get; set; }
     }
 }

@@ -22,7 +22,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <param name="projectDetails">The project details.</param>
         /// <param name="userObjectId">The user object Id of project creator.</param>
         /// <returns>Returns project details.</returns>
-        Task<ProjectDTO> CreateProjectAsync(ProjectDTO projectDetails, Guid userObjectId);
+        Task<Project> CreateProjectAsync(ProjectDTO projectDetails, Guid userObjectId);
 
         /// <summary>
         /// Updates the details of a project.

@@ -131,16 +131,11 @@ namespace Microsoft.Teams.Apps.Timesheet.Common.Repositories
         /// <returns>Returns the project details along with tasks and members details.</returns>
         public async Task<Project> GetProjectByIdAsync(Guid projectId, Guid userObjectId)
         {
-            var project = await this.Context.Projects
+            return await this.Context.Projects
                 .Where(project => project.Id.Equals(projectId) && project.CreatedBy.Equals(userObjectId))
-                .Include(project => project.Tasks)
-                .Include(project => project.Members)
+                .Include(project => project.Tasks.Where(task => task.IsRemoved == false))
+                .Include(project => project.Members.Where(member => member.IsRemoved == false))
                 .FirstOrDefaultAsync();
-
-            project.Tasks = project.Tasks.Where(task => !task.IsRemoved).ToList();
-            project.Members = project.Members.Where(member => !member.IsRemoved).ToList();
-
-            return project;
         }
 
         /// <summary>

@@ -8,6 +8,7 @@
     width: 100%;
 
     .manage-timesheet-content {
+        color: #484644;
         margin-top: 1.4rem;
 
         .error-container {
@@ -21,6 +22,7 @@
 
     .project-header {
         font-size: 1.8rem;
+        color: #484644;
     }
 
     .timesheet-table {
@@ -103,27 +105,11 @@
         .mobile-subtitle {
             font-size: 1.3rem;
             color: #6E6E6E;
-
-            .high-contrast-container & {
-                color: #FFF;
-            }
-
-            .dark-container & {
-                color: #a9a8a8;
-            }
         }
 
         .selected-text {
             font-size: 1.5rem;
             color: #6E6E6E;
-
-            .high-contrast-container & {
-                color: #FFF;
-            }
-
-            .dark-container & {
-                color: #a9a8a8;
-            }
         }
 
         .list-row {
@@ -148,14 +134,6 @@
         padding-right: 3rem;
         background-color: white;
         width: 100%;
-    }
-
-    .manager-dashboard-reject-icon {
-        color: #8E192E;
-    }
-
-    .manager-dashboard-approve-icon {
-        color: #237B4B;
     }
 }
 
@@ -185,17 +163,7 @@
     }
 }
 
-.web-reject-dialog {
-    .reason-input {
-        height: 9.6rem !important;
-    }
-}
-
 .request-review-dialog {
-    .reason-input {
-        height: 9.6rem !important;
-    }
-
     .dialog-button-left {
         width: 50%;
         height: 4.3rem !important;
@@ -211,10 +179,6 @@
     .dialog-header {
         width: 27rem !important;
         height: 5.35rem !important;
-    }
-
-    .mobile-dialog-margin {
-        margin-left: 1rem;
     }
 
     .dialog-button-text {

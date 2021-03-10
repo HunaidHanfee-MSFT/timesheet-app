@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
-namespace Microsoft.Teams.Apps.Timesheet.Helpers
+namespace Microsoft.Teams.Apps.Timesheet.Helpers.Task
 {
     using System;
     using System.Threading.Tasks;

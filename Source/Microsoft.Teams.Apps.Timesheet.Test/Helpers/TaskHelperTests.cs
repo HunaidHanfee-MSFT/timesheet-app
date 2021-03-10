@@ -11,7 +11,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Test.Helpers
     using Microsoft.Extensions.Logging;
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
-    using Microsoft.Teams.Apps.Timesheet.Helpers;
+    using Microsoft.Teams.Apps.Timesheet.Helpers.Task;
     using Microsoft.Teams.Apps.Timesheet.Tests.TestData;
     using Microsoft.VisualStudio.TestTools.UnitTesting;
     using Moq;

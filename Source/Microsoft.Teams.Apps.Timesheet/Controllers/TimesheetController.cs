@@ -86,14 +86,13 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
 
             if (!this.timesheetHelper.IsClientCurrentDateValid(clientLocalCurrentDate, DateTime.UtcNow.Date))
             {
-                this.RecordEvent("Save timesheet- The HTTP POST call to save timesheet has been failed.", RequestType.Failed);
                 return this.BadRequest(new ErrorResponse { Message = "The provided current date is invalid." });
             }
 
             try
             {
                 var userTimesheetsToSave = timesheetDetails.Where(timesheet =>
-                    timesheet.ProjectDetails != null && timesheet.ProjectDetails.Any(project => project.TimesheetDetails.Any()));
+                    timesheet.ProjectDetails != null && timesheet.ProjectDetails.All(project => project.TimesheetDetails.Any()));
 
                 // Filter timesheet dates those aren't frozen.
                 var notYetFrozenTimesheetDates = this.timesheetHelper.GetNotYetFrozenTimesheetDates(userTimesheetsToSave.Select(x => x.TimesheetDate), DateTime.UtcNow.Date);
@@ -102,12 +101,11 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
 
                 if (userTimesheetsToSave.IsNullOrEmpty())
                 {
-                    this.logger.LogInformation("The timesheet can not be filled for frozen timesheet dates for user {0}.", this.UserAadId);
-                    this.RecordEvent("Save timesheet- The HTTP POST call to save timesheet has been failed.", RequestType.Failed);
+                    this.logger.LogInformation("The timesheet can not be filled for frozen timesheet dates.");
                     return this.BadRequest(new ErrorResponse { Message = "The timesheet can not be filled for frozen timesheet dates." });
                 }
 
-                var result = await this.timesheetHelper.SaveTimesheetsAsync(userTimesheetsToSave, clientLocalCurrentDate, Guid.Parse(this.UserAadId));
+                var result = await this.timesheetHelper.SaveTimesheetsAsync(timesheetDetails, clientLocalCurrentDate, Guid.Parse(this.UserAadId));
 
                 if (result != null)
                 {
@@ -129,16 +127,37 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
         /// <summary>
         /// Handles API request to submit timesheet of logged-in user.
         /// </summary>
+        /// <param name="clientLocalCurrentDate">The client's local current date.</param>
+        /// <param name="timesheetDetails">The timesheet details that needs to be submitted.</param>
         /// <returns>Returns true if timesheet submitted successfully. Else returns false.</returns>
-        [HttpPost("submit/")]
+        [HttpPost("submit/{clientLocalCurrentDate}")]
         [Authorize(Policy = PolicyNames.MustBeProjectMemberPolicy)]
-        public async Task<IActionResult> SubmitTimesheetsAsync()
+        public async Task<IActionResult> SubmitTimesheetsAsync(DateTime clientLocalCurrentDate, [FromBody] IEnumerable<UserTimesheet> timesheetDetails)
         {
             this.RecordEvent("Submit timesheet- The HTTP POST call to submit timesheet has been initiated.", RequestType.Initiated);
 
+            if (!this.timesheetHelper.IsClientCurrentDateValid(clientLocalCurrentDate, DateTime.UtcNow.Date))
+            {
+                return this.BadRequest(new ErrorResponse { Message = "The provided current date is invalid." });
+            }
+
             try
             {
-                var result = await this.timesheetHelper.SubmitTimesheetsAsync(Guid.Parse(this.UserAadId));
+                var userTimesheetsToSave = timesheetDetails.Where(timesheet =>
+                   timesheet.ProjectDetails != null && timesheet.ProjectDetails.All(project => project.TimesheetDetails.Any()));
+
+                // Filter timesheet dates those aren't frozen.
+                var notYetFrozenTimesheetDates = this.timesheetHelper.GetNotYetFrozenTimesheetDates(userTimesheetsToSave.Select(x => x.TimesheetDate), DateTime.UtcNow.Date);
+
+                userTimesheetsToSave = userTimesheetsToSave.Where(x => notYetFrozenTimesheetDates.Contains(x.TimesheetDate));
+
+                if (userTimesheetsToSave.IsNullOrEmpty())
+                {
+                    this.logger.LogInformation("The timesheet can not be filled for frozen timesheet dates.");
+                    return this.BadRequest(new ErrorResponse { Message = "The timesheet can not be filled for frozen timesheet dates." });
+                }
+
+                var result = await this.timesheetHelper.SubmitTimesheetsAsync(clientLocalCurrentDate, timesheetDetails, Guid.Parse(this.UserAadId));
 
                 if (result != null)
                 {
@@ -173,7 +192,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
             if (!this.timesheetHelper.IsClientCurrentDateValid(clientLocalCurrentDate, DateTime.UtcNow))
             {
                 this.logger.LogInformation("The timesheet can not be filled as provided current date is invalid.");
-                this.RecordEvent("Duplicate efforts- The HTTP POST call to duplicate efforts has been failed.", RequestType.Failed);
                 return this.BadRequest(new ErrorResponse { Message = "The timesheet can not be filled as provided current date is invalid." });
             }
 
@@ -187,8 +205,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
                 // If all target dates are frozen.
                 if (notYetFrozenTimesheetDates.IsNullOrEmpty())
                 {
-                    this.logger.LogInformation("The timesheet can not be filled for frozen timesheet dates for user {0}.", this.UserAadId);
-                    this.RecordEvent("Duplicate efforts- The HTTP POST call to duplicate efforts has been failed.", RequestType.Failed);
+                    this.logger.LogInformation("The timesheet can not be filled as the target dates are frozen.");
                     return this.BadRequest(new ErrorResponse { Message = "The timesheet can not be filled as the target dates are frozen." });
                 }
 
@@ -198,7 +215,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
                 if (sourceDateTimesheet == null || sourceDateTimesheet.ProjectDetails.IsNullOrEmpty())
                 {
                     this.logger.LogInformation("The source date must have projects.");
-                    this.RecordEvent("Duplicate efforts- The HTTP POST call to duplicate efforts has been failed.", RequestType.Failed);
                     return this.BadRequest(new ErrorResponse { Message = "The source date must have projects." });
                 }
 
@@ -270,7 +286,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
         /// <param name="timesheetsToApprove">Holds the details of user and timesheet to approve.</param>
         /// <returns>Returns true if requests are updated, else return false.</returns>
         [HttpPost("approve")]
-        [Authorize(PolicyNames.MustBeManagerOfReporteePolicy)]
+        [Authorize(PolicyNames.MustBeManagerPolicy)]
         public async Task<IActionResult> ApproveTimesheetsAsync([FromBody] IEnumerable<RequestApprovalDTO> timesheetsToApprove)
         {
             this.RecordEvent("Approve timesheets- The HTTP POST call to approve timesheets has been initiated.", RequestType.Initiated);
@@ -292,7 +308,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
                 if (submittedTimesheets == null)
                 {
                     this.RecordEvent("Approve timesheets- The HTTP POST call to approve timesheets has failed.", RequestType.Failed);
-                    this.logger.LogInformation("No submitted timesheets found for user {0}.", this.UserAadId);
                     return this.NotFound("Timesheets not found.");
                 }
 
@@ -343,7 +358,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
                 if (submittedTimesheets == null)
                 {
                     this.RecordEvent("Reject timesheets- The HTTP POST call to reject timesheets has failed.", RequestType.Failed);
-                    this.logger.LogInformation("No submitted timesheets found for user {0}.", this.UserAadId);
                     return this.NotFound("Timesheets not found.");
                 }
 

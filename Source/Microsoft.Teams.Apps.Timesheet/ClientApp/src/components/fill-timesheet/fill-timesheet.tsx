@@ -27,7 +27,7 @@ import { Guid } from "guid-typescript";
 import { addMemberTaskAsync, deleteMemberTaskAsync } from "../../api/project";
 import { getResources } from "../../api/resource-api";
 import ITask from "../../models/task";
-import IResource from "../../models/resource";
+import IResource from "../../models/Resource";
 import IKeyValue from "../../models/key-value";
 import { getTotalEfforts } from "../../Helpers/common-helper";
 import { RouteComponentProps, withRouter } from "react-router";
@@ -64,17 +64,16 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
     constructor(props: IFillTimesheetProps) {
         super(props);
         this.localize = this.props.t;
-        this.applicationSettings = { timesheetFreezeDayOfMonth: Constants.timesheetFreezeDayOfMonth, weeklyEffortsLimit: Constants.weeklyEffortsLimit, dailyEffortsLimit: Constants.dailyEffortsLimit };
+        this.applicationSettings = { timesheetFreezeDayOfMonth: Constants.timesheetFreezeDayOfMonth, weeklyEffortsLimit: Constants.weeklyEffortsLimit };
 
         this.loadApplicationSettings = this.loadApplicationSettings.bind(this);
         this.getUserTimesheetsAsync = this.getUserTimesheetsAsync.bind(this);
         this.getManagerComments = this.getManagerComments.bind(this);
         this.getTimesheetStatus = this.getTimesheetStatus.bind(this);
         this.isControlDisabled = this.isControlDisabled.bind(this);
-        this.isTimesheetExceededEffortsLimit = this.isTimesheetExceededEffortsLimit.bind(this);
+        this.isTimesheetExceededWeeklyEffortsLimit = this.isTimesheetExceededWeeklyEffortsLimit.bind(this);
         this.isDuplicateEffortsExceedWeeklyLimit = this.isDuplicateEffortsExceedWeeklyLimit.bind(this);
         this.handleTokenAccessFailure = this.handleTokenAccessFailure.bind(this);
-        this.areTimesheetsAvailableToSubmit = this.areTimesheetsAvailableToSubmit.bind(this);
         this.onScreenResize = this.onScreenResize.bind(this);
         this.onEffortsDuplicated = this.onEffortsDuplicated.bind(this);
         this.onCalendarEditModeChange = this.onCalendarEditModeChange.bind(this);
@@ -96,7 +95,7 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
         this.onSelectedDatesChange = this.onSelectedDatesChange.bind(this);
 
         this.state = {
-            isMobileView: window.outerWidth <= Constants.maxWidthForMobileView,
+            isMobileView: window.innerWidth <= Constants.maxWidthForMobileView,
             isCalendarInEditMode: false,
             timesheetDataForCalendar: [],
             timesheetDataForProjects: [],
@@ -132,14 +131,6 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
 
         if (apiResponse.status === StatusCodes.OK && apiResponse.data) {
             this.applicationSettings = apiResponse.data as IResource;
-
-            let totalDaysInCurrentMonth = moment().daysInMonth();
-
-            // If specified timesheet freeze day of month is greater than total days in current month, then reset
-            // timesheet freeze day to last day of client current month.
-            if (this.applicationSettings.timesheetFreezeDayOfMonth > totalDaysInCurrentMonth) {
-                this.applicationSettings.timesheetFreezeDayOfMonth = totalDaysInCurrentMonth;
-            }
         }
     }
 
@@ -184,23 +175,7 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
                     }
                 }
 
-                let dataToSaveOrSubmit: IUserTimesheet[] = this.state.dataToSaveOrSubmit
-                    && this.state.dataToSaveOrSubmit.length > 0 ? cloneDeep(this.state.dataToSaveOrSubmit) : [];
-
-                let timesheetDataForProjects: IUserTimesheet[] = cloneDeep(timesheetDataForCalendar);
-
-                if (dataToSaveOrSubmit && dataToSaveOrSubmit.length > 0) {
-                    for (let i = 0; i < timesheetDataForProjects.length; i++) {
-                        let filledTimesheetDetails = dataToSaveOrSubmit.find((timesheetData: IUserTimesheet) =>
-                            timesheetData && timesheetData.timesheetDate.valueOf() === timesheetDataForProjects[i].timesheetDate.valueOf());
-
-                        if (filledTimesheetDetails) {
-                            timesheetDataForProjects[i] = filledTimesheetDetails;
-                        }
-                    }
-                }
-
-                this.setState({ timesheetDataForCalendar, timesheetDataForProjects, isUserTimesheetsLoading: false });
+                this.setState({ timesheetDataForCalendar, timesheetDataForProjects: timesheetDataForCalendar, isUserTimesheetsLoading: false });
             }
             else {
                 this.setState({ isUserTimesheetsLoading: false });
@@ -265,27 +240,6 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
             || this.state.isTimesheetDisabled
     }
 
-    // Indicates whether there are timesheets available to submit.
-    private areTimesheetsAvailableToSubmit() {
-        if (this.state.dataToSaveOrSubmit && this.state.dataToSaveOrSubmit.length > 0) {
-            return true;
-        }
-
-        let timesheets: IUserTimesheet[] = this.state.timesheetDataForCalendar;
-
-        for (let i = 0; i < timesheets.length; i++) {
-            for (let j = 0; j < timesheets[i].projectDetails.length; j++) {
-                let hasSavedTimesheet: boolean = timesheets[i].projectDetails[j].timesheetDetails.some((x: ITimesheetDetails) => x.status === TimesheetStatus.Saved);
-
-                if (hasSavedTimesheet) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
     /**
      * Copies newly created task details to other dates within the task date range or delete tasks.
      * @param taskToInsertOrDelete The task details to be inserted or deleted.
@@ -335,51 +289,47 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
     }
 
     /**
-     * Checks whether filled timesheet exceeded daily and weekly efforts limit.
+     * Checks whether filled timesheet exceeded weekly efforts limit.
      * @param userTimesheets The timesheet details.
      */
-    private isTimesheetExceededEffortsLimit(userTimesheets: IUserTimesheet[]) {
+    private isTimesheetExceededWeeklyEffortsLimit(userTimesheets: IUserTimesheet[]) {
         let effortsPerWeek: IKeyValue[] = [];
 
         for (let i = 0; i < userTimesheets?.length; i++) {
-            let weekNumber = moment().week(moment(userTimesheets[i].timesheetDate).week()).format("WW");
+            let weekNumber = moment(userTimesheets[i].timesheetDate).week();
 
             let weekAtIndex = effortsPerWeek.findIndex((record: IKeyValue) => record.key === weekNumber);
             let totalEffortsOfWeekday = getTotalEfforts(userTimesheets[i]);
 
-            if (totalEffortsOfWeekday > this.applicationSettings.dailyEffortsLimit) {
-                this.setState((prevState: IFillTimesheetState) => ({
-                    notification: {
-                        id: prevState.notification.id + 1,
-                        message: this.localize("fillTimesheetDailyLimitExceededError", { date: moment(userTimesheets[i].timesheetDate).format("DD MMM, YYYY"), maxDailyEfforts: this.applicationSettings.dailyEffortsLimit }),
-                        type: ActivityStatus.Error
-                    }
-                }));
-
-                return true;
-            }
-
             if (weekAtIndex > -1) {
                 effortsPerWeek[weekAtIndex].value += totalEffortsOfWeekday;
+
+                if (effortsPerWeek[weekAtIndex].value > this.applicationSettings.weeklyEffortsLimit) {
+                    this.setState((prevState: IFillTimesheetState) => ({
+                        notification: {
+                            id: prevState.notification.id + 1,
+                            message: this.localize("fillTimesheetWeeklyLimitExceededError", { weekNumber, effortsOfWeek: effortsPerWeek[weekAtIndex].value, maxEffortsPerWeek: this.applicationSettings.weeklyEffortsLimit }),
+                            type: ActivityStatus.Error
+                        }
+                    }));
+
+                    return true;
+                }
             }
             else {
+                if (totalEffortsOfWeekday > this.applicationSettings.weeklyEffortsLimit) {
+                    this.setState((prevState: IFillTimesheetState) => ({
+                        notification: {
+                            id: prevState.notification.id + 1,
+                            message: this.localize("fillTimesheetWeeklyLimitExceededError", { weekNumber, effortsOfWeek: totalEffortsOfWeekday, maxEffortsPerWeek: this.applicationSettings.weeklyEffortsLimit }),
+                            type: ActivityStatus.Error
+                        }
+                    }));
+
+                    return true;
+                }
+
                 effortsPerWeek.push({ key: weekNumber, value: totalEffortsOfWeekday });
-            }
-        }
-
-        if (effortsPerWeek && effortsPerWeek.length > 0) {
-            let exceededLimitWeekDetails = effortsPerWeek.find((weekDetails: IKeyValue) => weekDetails.value > this.applicationSettings.weeklyEffortsLimit);
-
-            if (exceededLimitWeekDetails) {
-                this.setState((prevState: IFillTimesheetState) => ({
-                    notification: {
-                        id: prevState.notification.id + 1,
-                        message: this.localize("fillTimesheetWeeklyLimitExceededError", { weekNumber: exceededLimitWeekDetails?.key, effortsOfWeek: exceededLimitWeekDetails?.value, maxEffortsPerWeek: this.applicationSettings.weeklyEffortsLimit }),
-                        type: ActivityStatus.Error
-                    }
-                }));
-
-                return true;
             }
         }
 
@@ -397,49 +347,43 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
         }
 
         let effortsPerWeek: IKeyValue[] = [];
-        let calendarData: IUserTimesheet[] = this.state.timesheetDataForCalendar ? this.state.timesheetDataForCalendar : [];
 
         for (let i = 0; i < targetDates?.length; i++) {
-            let weekNumber = moment(targetDates[i]).isoWeek();
+            let weekNumber = moment(targetDates[i]).week();
 
             let weekAtIndex = effortsPerWeek.findIndex((record: IKeyValue) => record.key === weekNumber);
 
             if (weekAtIndex > -1) {
                 effortsPerWeek[weekAtIndex].value += sourceDateEfforts;
+
+                if (effortsPerWeek[weekAtIndex].value > this.applicationSettings.weeklyEffortsLimit) {
+                    this.setState((prevState: IFillTimesheetState) => ({
+                        notification: {
+                            id: prevState.notification.id + 1,
+                            message: this.localize("fillTimesheetWeeklyLimitExceededError", { weekNumber, effortsOfWeek: effortsPerWeek[weekAtIndex].value, maxEffortsPerWeek: this.applicationSettings.weeklyEffortsLimit }),
+                            type: ActivityStatus.Error
+                        }
+                    }));
+
+                    return true;
+                }
             }
             else {
-                let calendarDataWithoutTargetDate = calendarData.filter((timesheet: IUserTimesheet) => timesheet.timesheetDate.valueOf() !== moment(targetDates[i]).startOf('day').toDate().valueOf()
-                    && timesheet.timesheetDate.valueOf() >= moment(targetDates[i]).startOf('week').startOf('day').toDate().valueOf()
-                    && timesheet.timesheetDate.valueOf() <= moment(targetDates[i]).endOf('week').startOf('day').toDate().valueOf()
-                );
+                if (sourceDateEfforts > this.applicationSettings.weeklyEffortsLimit) {
+                    this.setState((prevState: IFillTimesheetState) => ({
+                        notification: {
+                            id: prevState.notification.id + 1,
+                            message: this.localize("fillTimesheetWeeklyLimitExceededError", { weekNumber, effortsOfWeek: sourceDateEfforts, maxEffortsPerWeek: this.applicationSettings.weeklyEffortsLimit }),
+                            type: ActivityStatus.Error
+                        }
+                    }));
 
-                let filledEfforts = calendarDataWithoutTargetDate.reduce((timesheetHours: number, timesheet: IUserTimesheet) => {
-                    return timesheetHours + getTotalEfforts(timesheet);
-                }, 0);
+                    return true;
+                }
 
-                filledEfforts += sourceDateEfforts;
-
-                effortsPerWeek.push({ key: weekNumber, value: filledEfforts });
+                effortsPerWeek.push({ key: weekNumber, value: sourceDateEfforts * 2 });
             }
         }
-
-        if (effortsPerWeek && effortsPerWeek.length > 0) {
-            let exceededLimitWeekDetails = effortsPerWeek.find((weekDetails: IKeyValue) => weekDetails.value > this.applicationSettings.weeklyEffortsLimit);
-
-            if (exceededLimitWeekDetails) {
-                this.setState((prevState: IFillTimesheetState) => ({
-                    notification: {
-                        id: prevState.notification.id + 1,
-                        message: this.localize("fillTimesheetWeeklyLimitExceededError", { weekNumber: exceededLimitWeekDetails?.key, effortsOfWeek: exceededLimitWeekDetails?.value, maxEffortsPerWeek: this.applicationSettings.weeklyEffortsLimit }),
-                        type: ActivityStatus.Error
-                    }
-                }));
-
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private handleTokenAccessFailure(error: string) {
@@ -459,31 +403,9 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
         return "-";
     }
 
-    /**
-     * Filter data to be saved  or submitted.
-     * @param dataToSaveOrSubmit Dates which need to save or submit.
-     */
-    private getFilteredDataToBeSavedOrSubmitted(dataToSaveOrSubmit: IUserTimesheet[]) {
-        let filteredData: IUserTimesheet[] = [];
-
-        if (dataToSaveOrSubmit) {
-            dataToSaveOrSubmit.forEach(timesheet => {
-                if (timesheet.projectDetails) {
-                    timesheet.projectDetails.forEach(project => {
-                        if (project.timesheetDetails && project.timesheetDetails.length > 0) {
-                            filteredData.push(timesheet);
-                        }
-                    });
-                }
-            });
-        }
-
-        return filteredData;
-    }
-
     // The event handler called when screen size get changed
     private onScreenResize() {
-        this.setState({ isMobileView: window.outerWidth <= Constants.maxWidthForMobileView });
+        this.setState({ isMobileView: window.innerWidth <= Constants.maxWidthForMobileView });
     }
 
     /**
@@ -521,22 +443,22 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
             let apiResponse = await duplicateEffortsAsync(this.state.selectedDateInCalendar.date, targetDates, moment().toDate(), this.handleTokenAccessFailure);
 
             if (apiResponse.status === StatusCodes.OK) {
-                this.getUserTimesheetsAsync().finally(() => {
+                    this.getUserTimesheetsAsync().finally(() => {
+                        this.setState((prevState: IFillTimesheetState) => ({
+                            isDuplicatingEfforts: false,
+                            notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveSuccessfulMessage"), type: ActivityStatus.Success }
+                        }));
+                    });
+                }
+                else {
                     this.setState((prevState: IFillTimesheetState) => ({
                         isDuplicatingEfforts: false,
-                        notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveSuccessfulMessage"), type: ActivityStatus.Success }
+                        notification: { id: prevState.notification.id + 1, message: this.localize("duplicateEffortsFailedError"), type: ActivityStatus.Error }
                     }));
-                });
+                }
             }
             else {
                 this.setState((prevState: IFillTimesheetState) => ({
-                    isDuplicatingEfforts: false,
-                    notification: { id: prevState.notification.id + 1, message: this.localize("duplicateEffortsFailedError"), type: ActivityStatus.Error }
-                }));
-            }
-        }
-        else {
-            this.setState((prevState: IFillTimesheetState) => ({
                 notification: { id: prevState.notification.id + 1, message: this.localize("duplicateEffortsFailedError"), type: ActivityStatus.Error }
             }));
         }
@@ -620,33 +542,22 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
 
     // Event handler called when submitting timesheet
     private async onSubmitTimesheet() {
-        if (this.isTimesheetExceededEffortsLimit(this.state.timesheetDataForProjects)) {
+        if (this.isTimesheetExceededWeeklyEffortsLimit(this.state.timesheetDataForProjects)) {
             return false;
         }
+
+        this.setState({ isSubmittingTimesheet: true });
 
         let dataToSaveOrSubmit = this.state.dataToSaveOrSubmit
             && this.state.dataToSaveOrSubmit.length > 0 ? cloneDeep(this.state.dataToSaveOrSubmit) : [];
 
-        if (dataToSaveOrSubmit.length === 0) {
-            return false;
-        }
-
-        this.setState({ isSavingTimesheet: true, isSubmittingTimesheet: true });
-        let apiResponse = await saveTimesheetAsync(dataToSaveOrSubmit, moment().toDate(), this.handleTokenAccessFailure);
+        let apiResponse = await submitTimesheetAsync(dataToSaveOrSubmit, moment().toDate(), this.handleTokenAccessFailure);
 
         if (apiResponse.status === StatusCodes.OK) {
-            this.setState((prevState: IFillTimesheetState) => ({
-                dataToSaveOrSubmit: [],
-                notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveSuccessfulMessage"), type: ActivityStatus.Success }
-            }));
-
-            apiResponse = await submitTimesheetAsync(this.handleTokenAccessFailure);
-
-            if (apiResponse.status === StatusCodes.OK) {
                 this.getUserTimesheetsAsync().finally(() => {
                     this.setState((prevState: IFillTimesheetState) => ({
                         isSubmittingTimesheet: false,
-                        isSavingTimesheet: false,
+                        dataToSaveOrSubmit: [],
                         notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSubmitSuccessfulMessage"), type: ActivityStatus.Success }
                     }));
                 });
@@ -654,19 +565,10 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
             else {
                 this.setState((prevState: IFillTimesheetState) => ({
                     isSubmittingTimesheet: false,
-                    isSavingTimesheet: false,
                     notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSubmitErrorMessage"), type: ActivityStatus.Error }
                 }));
             }
         }
-        else {
-            this.setState((prevState: IFillTimesheetState) => ({
-                isSavingTimesheet: false,
-                isSubmittingTimesheet: false,
-                notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveErrorMessage"), type: ActivityStatus.Error }
-            }));
-        }
-    }
 
     /**
      * Event handler called when selected date changed on calendar
@@ -703,37 +605,33 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
 
     // Event handler called when click on save timesheet.
     private async onSaveTimesheet() {
-        if (this.isTimesheetExceededEffortsLimit(this.state.timesheetDataForProjects)) {
-            return false;
-        }
-
-        let dataToSaveOrSubmit = this.state.dataToSaveOrSubmit
-            && this.state.dataToSaveOrSubmit.length > 0 ? cloneDeep(this.state.dataToSaveOrSubmit) : [];
-
-        if (dataToSaveOrSubmit.length === 0)
-        {
+        if (this.isTimesheetExceededWeeklyEffortsLimit(this.state.timesheetDataForProjects)) {
             return false;
         }
 
         this.setState({ isSavingTimesheet: true });
+
+        let dataToSaveOrSubmit = this.state.dataToSaveOrSubmit
+            && this.state.dataToSaveOrSubmit.length > 0 ? cloneDeep(this.state.dataToSaveOrSubmit) : [];
+
         let apiResponse = await saveTimesheetAsync(dataToSaveOrSubmit, moment().toDate(), this.handleTokenAccessFailure);
 
         if (apiResponse.status === StatusCodes.OK) {
-            this.getUserTimesheetsAsync().finally(() => {
+                this.getUserTimesheetsAsync().finally(() => {
+                    this.setState((prevState: IFillTimesheetState) => ({
+                        isSavingTimesheet: false,
+                        dataToSaveOrSubmit: [],
+                        notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveSuccessfulMessage"), type: ActivityStatus.Success }
+                    }));
+                });
+            }
+            else {
                 this.setState((prevState: IFillTimesheetState) => ({
                     isSavingTimesheet: false,
-                    dataToSaveOrSubmit: [],
-                    notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveSuccessfulMessage"), type: ActivityStatus.Success }
+                    notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveErrorMessage"), type: ActivityStatus.Error }
                 }));
-            });
+            }
         }
-        else {
-            this.setState((prevState: IFillTimesheetState) => ({
-                isSavingTimesheet: false,
-                notification: { id: prevState.notification.id + 1, message: this.localize("TimesheetSaveErrorMessage"), type: ActivityStatus.Error }
-            }));
-        }
-    }
 
     /**
      * Event handler called when week gets changed in calendar.
@@ -772,7 +670,6 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
 
                         let dataToSaveOrSubmit: IUserTimesheet[] = this.state.dataToSaveOrSubmit ? cloneDeep(this.state.dataToSaveOrSubmit) : [];
                         this.copyOrDeleteTask(projectDetails.timesheetDetails[taskAtIndex], projectDetails.id, dataToSaveOrSubmit, true);
-                        var filteredDataToBeSavedOrSubmitted: IUserTimesheet[] = this.getFilteredDataToBeSavedOrSubmitted(dataToSaveOrSubmit);
 
                         this.copyOrDeleteTask(projectDetails.timesheetDetails[taskAtIndex], projectDetails.id, userTimesheets, true);
 
@@ -780,7 +677,7 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
                             timesheetDataForProjects: userTimesheets,
                             timesheetDataForCalendar: userTimesheets,
                             isDeleteTaskInProgress: false,
-                            dataToSaveOrSubmit: filteredDataToBeSavedOrSubmitted,
+                            dataToSaveOrSubmit,
                             notification: { id: prevState.notification.id + 1, message: this.localize("fillTimesheetDeleteTaskSuccess"), type: ActivityStatus.Success }
                         }));
                     }
@@ -1053,15 +950,15 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
                             onClick={this.onSaveTimesheet} />
                         <Dialog
                             design={{ width: "30rem" }}
-                            header={<Text content={this.localize("submitTimesheetToManagerMobileDialogHeader")} weight="semibold" />}
-                            content={this.localize("submitTimesheetToManagerMobileDialogContent")}
-                            cancelButton={this.localize("cancelButtonLabel")}
-                            confirmButton={this.localize("confirmationSubmitButtonLabel")}
+                            header={<Text content={this.localize("submitTimesheetToManagerDialogHeader")} weight="semibold" />}
+                            content={this.localize("submitTimesheetToManagerDialogContent")}
+                            cancelButton={this.localize("confirmationNo")}
+                            confirmButton={this.localize("confirmationYes")}
                             onConfirm={this.onSubmitTimesheet}
                             trigger={
                                 <Button
                                     primary
-                                    disabled={this.isControlDisabled() || !this.areTimesheetsAvailableToSubmit()}
+                                    disabled={this.isControlDisabled()}
                                     loading={this.state.isSubmittingTimesheet}
                                     content={this.localize("submitButtonText")} />
                             }
@@ -1096,7 +993,7 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
 
         return (
             <Flex className="half-width" column gap="gap.small">
-                <Text content={moment(this.state.selectedDateInCalendar.date).format("MMMM DD, YYYY")} size="larger" />
+                <Text content={moment(this.state.selectedDateInCalendar.date).format("dddd, Do MMM")} size="larger" />
                 <Flex vAlign="center" gap="gap.large">
                     <Flex className="half-width" column gap="gap.smaller">
                         <Text content={this.localize("fillTimesheetTotalHoursLabel")} weight="semibold" />
@@ -1159,15 +1056,15 @@ class FillTimesheet extends React.Component<IFillTimesheetProps, IFillTimesheetS
                             onClick={this.onSaveTimesheet} />
                         <Dialog
                             design={{ width: "60rem" }}
-                            header={<Text content={this.localize("submitTimesheetToManagerDesktopDialogHeader")} weight="semibold" />}
-                            content={this.localize("submitTimesheetToManagerDesktopDialogContent")}
-                            cancelButton={this.localize("cancelButtonLabel")}
-                            confirmButton={this.localize("confirmationSubmitButtonLabel")}
+                            header={<Text content={this.localize("submitTimesheetToManagerDialogHeader")} weight="semibold" />}
+                            content={this.localize("submitTimesheetToManagerDialogContent")}
+                            cancelButton={this.localize("confirmationNo")}
+                            confirmButton={this.localize("confirmationYes")}
                             onConfirm={this.onSubmitTimesheet}
                             trigger={
                                 <Button
                                     primary
-                                    disabled={this.isControlDisabled() || !this.areTimesheetsAvailableToSubmit()}
+                                    disabled={this.isControlDisabled()}
                                     loading={this.state.isSubmittingTimesheet}
                                     content={this.localize("submitButtonText")} />
                             }

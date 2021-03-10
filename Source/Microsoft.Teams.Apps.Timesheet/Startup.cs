@@ -67,14 +67,10 @@ namespace Microsoft.Teams.Apps.Timesheet
 #pragma warning disable CA1506 // Composition root expected to have coupling with many components.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton(
-                new MicrosoftAppCredentials(
-                     this.configuration.GetValue<string>("App:Id"),
-                     this.configuration.GetValue<string>("App:Password")));
-
             services.RegisterConfigurationSettings(this.configuration);
+
             services.AddControllers();
-            services.AddMvc().AddMvcOptions(mvcopt => { mvcopt.EnableEndpointRouting = false; });
+
             services.AddHttpContextAccessor();
             services.AddSingleton<IChannelProvider, SimpleChannelProvider>();
             services.AddSingleton<IMemoryCache, MemoryCache>();
@@ -129,7 +125,8 @@ namespace Microsoft.Teams.Apps.Timesheet
             app.UseRouting();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseMvc();
+            app.UseEndpoints(endpointRouteBuilder => endpointRouteBuilder.MapControllers());
+
             app.UseSpa(spa =>
             {
                 spa.Options.SourcePath = "ClientApp";

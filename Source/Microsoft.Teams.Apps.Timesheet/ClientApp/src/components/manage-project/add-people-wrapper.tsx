@@ -84,7 +84,7 @@ class AddPeopleWrapper extends React.Component<IAddPeopleWrapperProps, IAddPeopl
     * Handler which will be invoked when new user is selected as billable.
     * @param selectedItem selected value of an user.
     */
-    onBillableUserChanged = async (selectedItem: IUserDropdownItem[]) => {
+    onBillableUserChanged= async (selectedItem: IUserDropdownItem[]) => {
         this.setState({ billableUsers: selectedItem });
     }
 
@@ -106,17 +106,17 @@ class AddPeopleWrapper extends React.Component<IAddPeopleWrapperProps, IAddPeopl
 
         return (
             <div className="mobile-add-people">
+                <Flex vAlign="center">
+                    <Flex.Item push>
+                        <Button primary text content={<Text className="add-button" content={this.localize("addButtonLabel")} weight="semibold" />} onClick={this.onDoneClick} />
+                    </Flex.Item>
+                </Flex>
                 <AddMembersByBillingType
                     isMobileView={this.props.isMobileView}
                     onBillableUserChanged={this.onBillableUserChanged}
                     onNonBillableUserChanged={this.onNonBillableUserChanged}
                     existingUsers={this.props.existingUsers}
                 />
-                <Flex vAlign="center">
-                    <Flex.Item push>
-                        <Button primary content={<Text className="add-button" content={this.localize("doneButtonLabel")} weight="semibold" />} onClick={this.onDoneClick} />
-                    </Flex.Item>
-                </Flex>
             </div>);
     }
 

@@ -26,7 +26,6 @@ jest.mock("react-i18next", () => ({
         return Component;
     },
 }));
-
 jest.mock("@microsoft/teams-js", () => ({
     initialize: () => {
         return true;
@@ -36,28 +35,6 @@ jest.mock("@microsoft/teams-js", () => ({
             Promise.resolve({ teamId: "ewe", entityId: "sdsd", locale: "en-US" })
         ),
 }));
-
-jest.mock("react-router-dom", () => ({
-    withRouter: (Component: any) => {
-        Component.defaultProps = {
-            ...Component.defaultProps,
-            t: (key: any) => key,
-            match: {
-                params: {
-                    projectId: "8d5f9c58-7738-4645-a3d9-e743a9e9f3e1",
-                    isMobileView: false,
-                }
-            }
-        };
-        return Component;
-    },
-}));
-
-jest.mock("react-donut", () => {
-    Donut: {
-        return "DONUT";
-    }
-});
 
 let container: any = null;
 beforeEach(async () => {
@@ -95,12 +72,6 @@ describe("ManageProjectWrapper", () => {
             firstMember?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
         });
 
-        const dialogRemoveButton = document.querySelector("[data-tid=confirm-member-remove]");
-
-        await act(async () => {
-            dialogRemoveButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-        });
-
         const memberTable = document.querySelector("[data-tid=member-table]");
         expect(memberTable?.childElementCount).toBe(2);
     });
@@ -110,12 +81,6 @@ describe("ManageProjectWrapper", () => {
 
         await act(async () => {
             firstTask?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-        });
-
-        const dialogRemoveButton = document.querySelector("[data-tid=confirm-remove-button]");
-
-        await act(async () => {
-            dialogRemoveButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
         });
 
         const taskTable = document.querySelector("[data-tid=task-table]");

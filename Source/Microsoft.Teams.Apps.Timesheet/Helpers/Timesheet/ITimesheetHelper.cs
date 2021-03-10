@@ -37,11 +37,13 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         Task<List<TimesheetDTO>> SaveTimesheetsAsync(IEnumerable<UserTimesheet> userTimesheets, DateTime clientLocalCurrentDate, Guid userObjectId);
 
         /// <summary>
-        /// Updates the status of all saved timesheets to submitted.
+        /// Saves the timesheets if provided and updates the status of all saved timesheets to submitted.
         /// </summary>
+        /// <param name="clientLocalCurrentDate">The client's local current date.</param>
+        /// <param name="userTimesheetsToSave">The timesheet details that need to be saved.</param>
         /// <param name="userObjectId">The logged-in user object Id.</param>
         /// <returns>Returns true if timesheets submitted successfully. Else returns false.</returns>
-        Task<List<TimesheetDTO>> SubmitTimesheetsAsync(Guid userObjectId);
+        Task<List<TimesheetDTO>> SubmitTimesheetsAsync(DateTime clientLocalCurrentDate, IEnumerable<UserTimesheet> userTimesheetsToSave, Guid userObjectId);
 
         /// <summary>
         /// Gets timesheets of user between specified date range.

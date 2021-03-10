@@ -7,7 +7,7 @@ import * as React from "react";
 import { TFunction } from "i18next";
 import { Button, Flex, ArrowLeftIcon, Divider, Text } from '@fluentui/react-northstar';
 import { WithTranslation, withTranslation } from "react-i18next";
-import IProject from "../../models/project";
+import IProject from "../../models/Project";
 import AddMembersByBillingType from "../common/add-members/add-members-by-billing-type";
 import { IUserDropdownItem } from "../common/people-picker/people-picker";
 import IProjectMember from "../../models/project-member";
@@ -46,7 +46,7 @@ class Step2 extends React.Component<IStep2Props, IStep2State> {
             billableEmployees: [],
             nonBillableEmployees: [],
             isLoading: false,
-            tasks: this.props.project.tasks ? this.props.project.tasks : [],
+            tasks: [],
             errorMessage: ""
         }
     }
@@ -71,7 +71,7 @@ class Step2 extends React.Component<IStep2Props, IStep2State> {
         projectDetails.tasks = this.state.tasks;
 
         var response = await saveProject(projectDetails, this.handleTokenAccessFailure);
-        if (response.status === StatusCodes.CREATED) {
+        if (response.status === StatusCodes.OK) {
             microsoftTeams.tasks.submitTask({ isSuccessful: true });
         }
         else {
@@ -82,7 +82,7 @@ class Step2 extends React.Component<IStep2Props, IStep2State> {
     // Merged billable and non billable members in final array.
     mergeProjectMembers = () => {
         let billable: IProjectMember[] = this.state.billableEmployees.map((member: IUserDropdownItem) => { return { projectId: Guid.createEmpty().toString(), isBillable: true, userId: member.id } });
-        let nonbillable: IProjectMember[] = this.state.nonBillableEmployees.map((member: IUserDropdownItem) => { return { projectId: Guid.createEmpty().toString(), isBillable: false, userId: member.id } });
+        let nonbillable: IProjectMember[] = this.state.nonBillableEmployees.map((member: IUserDropdownItem) => { return { projectId: Guid.createEmpty().toString(), isBillable: true, userId: member.id } });
 
         return billable.concat(nonbillable);
     }
@@ -125,22 +125,21 @@ class Step2 extends React.Component<IStep2Props, IStep2State> {
         // Second parameter denotes step number.
         let previousStepProjectDetails = cloneDeep(this.props.project);
         previousStepProjectDetails.members = this.mergeProjectMembers();
-        previousStepProjectDetails.tasks = cloneDeep(this.state.tasks);
         this.props.onBackClick(previousStepProjectDetails, 1);
     }
 
     /**
-    * Invoked when billable user list is changed by either adding new or removing existing ones.
-    * @param billableUsers List of updated billable users.
-    */
+	* Invoked when billable user list is changed by either adding new or removing existing ones.
+	* @param billableUsers List of updated billable users.
+	*/
     onBillableUserChanged = (billableUsers: IUserDropdownItem[]) => {
         this.setState({ billableEmployees: billableUsers });
     }
 
     /**
-    * Invoked when non-billable user list is changed by either adding new or removing existing ones.
-    * @param nonBillableUsers List of updated non-billable users.
-    */
+	* Invoked when non-billable user list is changed by either adding new or removing existing ones.
+	* @param nonBillableUsers List of updated non-billable users.
+	*/
     onNonBillableUserChanged = (nonBillableUsers: IUserDropdownItem[]) => {
         this.setState({ nonBillableEmployees: nonBillableUsers });
     }
@@ -161,7 +160,7 @@ class Step2 extends React.Component<IStep2Props, IStep2State> {
     render() {
         return (
             <>
-                <Flex className="page-content" column>
+                <div className="page-content">
                     <AddTask
                         isMobileView={false}
                         isAddTaskOnDoneClick={false}
@@ -173,13 +172,13 @@ class Step2 extends React.Component<IStep2Props, IStep2State> {
                     />
                     <Divider design={{ padding: "2rem 0" }} />
                     <AddMembersByBillingType existingUsers={this.getExistingUsers()} onBillableUserChanged={this.onBillableUserChanged} onNonBillableUserChanged={this.onNonBillableUserChanged} isMobileView={false} />
-                </Flex>
+                </div>
                 <Flex gap="gap.smaller" className="button-footer" vAlign="center">
                     <Button icon={<ArrowLeftIcon />} content={this.localize("previousButtonLabel")} onClick={this.onPreviousClick} />
                     <Flex.Item push>
                         <Flex vAlign="center" gap="gap.small">
                             {this.state.errorMessage ? <Text error content={this.state.errorMessage} /> : null}
-                            <Button loading={this.state.isLoading} disabled={this.state.isLoading} content={this.localize("doneButtonLabel")} primary onClick={this.onSubmitClick} />
+                            <Button content={this.localize("doneButtonLabel")} primary onClick={this.onSubmitClick} />
                         </Flex>
                     </Flex.Item>
                 </Flex>

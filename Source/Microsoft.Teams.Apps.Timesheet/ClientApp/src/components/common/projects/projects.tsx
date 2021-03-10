@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { cloneDeep } from "lodash";
-import { Text, Accordion, Flex, Input, Divider, ChevronDownMediumIcon, Dialog, Button, TrashCanIcon, AddIcon, CloseIcon, AcceptIcon } from "@fluentui/react-northstar";
+import { Text, Accordion, Flex, Input, Divider, ChevronDownMediumIcon, Dialog, Button, TrashCanIcon, AddIcon } from "@fluentui/react-northstar";
 import { TFunction } from "i18next";
 import { WithTranslation, withTranslation, useTranslation } from "react-i18next";
 import IUserTimesheet from "../../../models/fill-timesheet/user-timesheet";
@@ -77,17 +77,16 @@ const Projects: React.FunctionComponent<IProjectsProps> = props => {
                 <React.Fragment>
                     {
                         props.isMobile ? (
-                            <Flex className="new-task" vAlign="center">
+                            <Flex className="new-task" vAlign="center" space="between">
                                 <Flex column gap="gap.smaller">
                                     <Text content={localize("fillTimesheetAddNewTaskLabel")} weight="semibold" size="small" />
                                     <Input disabled={projectDetails.isAddNewTaskInProgress || props.isDisabled} placeholder={localize("fillTimesheetAddNewTaskPlaceholder")} maxLength={50} onChange={(event) => props.onNewTaskNameChange(timesheetDate, event, projectDetails.id)} />
                                 </Flex>
-                                <Flex column gap="gap.smaller" padding="padding.medium">
+                                <Flex column gap="gap.smaller">
                                     <Text content={localize("fillTimesheetTaskEndDateLabel")} weight="semibold" size="small" />
                                     <DatePickerWrapper
                                         selectedDate={props.selectedCalendarDate}
                                         minDate={props.selectedCalendarDate}
-                                        maxDate={projectDetails.endDate}
                                         disableSelectionForPastDate={false}
                                         theme=""
                                         onDateSelect={(selectedDate: Date) => props.onNewTaskEndDateChange(timesheetDate, projectDetails.id, selectedDate)}
@@ -95,8 +94,8 @@ const Projects: React.FunctionComponent<IProjectsProps> = props => {
                                 </Flex>
                                 <Flex.Item push>
                                     <Flex gap="gap.smaller">
-                                        <Button iconOnly text primary loading={projectDetails.isAddNewTaskInProgress} disabled={projectDetails.isAddNewTaskInProgress} icon={<AcceptIcon />} onClick={() => props.onNewTaskSubmit(timesheetDate, projectDetails.id)} />
-                                        <Button iconOnly text disabled={projectDetails.isAddNewTaskInProgress || props.isDisabled} icon={<CloseIcon />} onClick={() => props.onCancelCreateNewTask(timesheetDate, projectDetails.id)} />
+                                        <Button text primary loading={projectDetails.isAddNewTaskInProgress} disabled={projectDetails.isAddNewTaskInProgress} content={localize("fillTimesheetAddNewTaskButtonText")} size="smallest" design={{ minWidth: "5.6rem" }} onClick={() => props.onNewTaskSubmit(timesheetDate, projectDetails.id)} />
+                                        <Button text primary disabled={projectDetails.isAddNewTaskInProgress || props.isDisabled} content={localize("fillTimesheetCancelNewTaskButtonText")} size="smallest" design={{ minWidth: "5.6rem" }} onClick={() => props.onCancelCreateNewTask(timesheetDate, projectDetails.id)} />
                                     </Flex>
                                 </Flex.Item>
                             </Flex>
@@ -112,7 +111,6 @@ const Projects: React.FunctionComponent<IProjectsProps> = props => {
                                             <DatePickerWrapper
                                                 selectedDate={props.selectedCalendarDate}
                                                 minDate={props.selectedCalendarDate}
-                                                maxDate={projectDetails.endDate}
                                                 disableSelectionForPastDate={false}
                                                 theme=""
                                                 onDateSelect={(selectedDate: Date) => props.onNewTaskEndDateChange(timesheetDate, projectDetails.id, selectedDate)}
@@ -206,10 +204,9 @@ const Projects: React.FunctionComponent<IProjectsProps> = props => {
                                     <Flex.Item push>
                                         <Flex>
                                             <Dialog
-                                                header={<Text content={localize("deleteTaskConfirmationMessage")} weight="semibold" />}
-                                                cancelButton={localize("cancelButtonLabel")}
-                                                confirmButton={localize("confirmationDeleteButtonLabel")}
-                                                content={localize("fillTimesheetDeleteTaskDialogContent")}
+                                                cancelButton={localize("confirmationNo")}
+                                                confirmButton={localize("confirmationYes")}
+                                                content={localize("deleteTaskConfirmationMessage")}
                                                 trigger={<Button text loading={task.isDeleteTaskInProgress} disabled={props.isDisabled} iconOnly icon={<TrashCanIcon />} />}
                                                 onConfirm={() => props.onDeleteTask(timesheetDate, project.id, index)}
                                             />
@@ -292,21 +289,20 @@ const Projects: React.FunctionComponent<IProjectsProps> = props => {
                         <Flex className="task" vAlign="center" space="between">
                             <Flex column vAlign="center" gap="gap.smaller">
                                 <Text content={task.taskTitle} size="small" weight="semibold" />
-                                <Input disabled={props.isDisabled} type="number" input={{ design: { width: "6.5rem" } }} min={0} value={task.hours} onChange={(event: any) => props.onTaskEffortChange(timesheetDate, projectDetails.id, index, event.target.value)} />
+                                <Input disabled={props.isDisabled} type="number" inverted input={{ design: { width: "6.5rem" } }} min={0} value={task.hours} onChange={(event: any) => props.onTaskEffortChange(timesheetDate, projectDetails.id, index, event.target.value)} />
                             </Flex>
                             {
                                 task.isAddedByMember ?
                                     <Dialog
-                                        design={{ width: "28rem" }}
-                                        header={<Text content={localize("deleteTaskConfirmationMessage")} weight="semibold" />}
-                                        cancelButton={localize("cancelButtonLabel")}
-                                        confirmButton={localize("confirmationDeleteButtonLabel")}
-                                        content={localize("fillTimesheetDeleteTaskDialogContent")}
+                                        cancelButton={localize("confirmationNo")}
+                                        confirmButton={localize("confirmationYes")}
+                                        content={localize("deleteTaskConfirmationMessage")}
                                         trigger={<Button text loading={task.isDeleteTaskInProgress} disabled={props.isDisabled} iconOnly icon={<TrashCanIcon />} />}
                                         onConfirm={() => props.onDeleteTask(timesheetDate, projectDetails.id, index)}
                                     /> : null
                             }
                         </Flex>
+                        <Divider className="tasks-separator" />
                     </React.Fragment>
                 );
             });

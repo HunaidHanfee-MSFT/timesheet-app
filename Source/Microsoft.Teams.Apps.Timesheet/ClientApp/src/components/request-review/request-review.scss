@@ -4,27 +4,14 @@
 // </copyright>
 
 .request-review-container {
+    padding: 1rem 1rem 0rem;
     width: 100%;
-    overflow-x: hidden;
-
-    .button-footer {
-        position: absolute;
-        width: 89%;
-        bottom: 1rem;
-        margin-top: 1rem;
-    }
+    height: 60rem;
+    overflow-x: auto;
 
     .request-table-container {
         height: 45vh;
         overflow-y: auto;
-        overflow-x: hidden;
-    }
-
-    .page-content {
-        overflow-x: hidden !important;
-        overflow-y: hidden !important;
-        width: 100%;
-        height: 84vh;
     }
 
     .user-avatar {
@@ -50,8 +37,6 @@
 
     .projects-detail-container {
         margin-top: 1.2rem;
-        overflow-y: auto;
-        height: 17vh;
     }
 
     .project-container {
@@ -77,14 +62,6 @@
         .subtitle-text {
             color: #6e6e6e;
             font-size: 1.3rem;
-
-            .high-contrast-container & {
-                color: #FFF;
-            }
-
-            .dark-container & {
-                color: #a9a8a8;
-            }
         }
 
         .title-text {
@@ -93,7 +70,6 @@
     }
 
     .review-request-mobile-view {
-        overflow-y: hidden;
 
         .user-details {
             width: 100%;
@@ -114,11 +90,7 @@
 
         .list-header {
             height: 4.8rem;
-        }
-
-        .list-container {
-            height: 50vh;
-            overflow-y: auto;
+            background: #F8F8F8;
         }
 
         .calendar-container {
@@ -139,11 +111,6 @@
         .project-title-detail {
             font-size: 1.5rem;
         }
-
-        .projects-detail-container {
-            overflow-y: auto;
-            height: 30vh;
-        }
     }
 
     .desktop-subtitle {
@@ -151,10 +118,14 @@
     }
 
     .footer {
-        position: absolute;
-        width: 89%;
-        bottom: 1rem;
-        margin-top: 1rem;
+        position: fixed;
+        bottom: 0;
+        right: 0;
+        padding-bottom: 3.2rem;
+        padding-top: 3.2rem;
+        padding-right: 3rem;
+        background-color: white;
+        width: 100%;
 
         .mobile-approve {
             border-radius: 0.8rem;

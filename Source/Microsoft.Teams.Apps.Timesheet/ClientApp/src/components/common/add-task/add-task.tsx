@@ -6,6 +6,7 @@
 import * as React from "react";
 import { Flex, Text, Input, Button, Loader } from "@fluentui/react-northstar";
 import { AddIcon, CloseIcon } from '@fluentui/react-icons-northstar';
+import { Icon } from '@fluentui/react/lib/Icon';
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import DatePickerWrapper from "../../common/date-picker/date-picker";
@@ -98,7 +99,8 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
         let filteredTasks: ITask[] = [];
 
         tasks.map((task: ITask) => {
-            if (task.title?.trim().length > 0) {
+            if (task.title?.trim().length > 0)
+            {
                 filteredTasks.push(task);
             }
         })
@@ -135,10 +137,6 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
 
             if (taskToUpdate) {
                 taskToUpdate.startDate = moment(date).startOf('day').toDate();
-
-                if (taskToUpdate.startDate > taskToUpdate.endDate) {
-                    taskToUpdate.endDate = moment(date).startOf('day').toDate();
-                }
 
                 if (!this.props.isAddTaskOnDoneClick && this.props.onTasksUpdated) {
                     this.props.onTasksUpdated(tasks);
@@ -193,7 +191,7 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
     /**
      * Render task input row
      */
-    renderTaskInputRow = () => {
+    renderTaskInputRow  = () => {
         let counter = 0;
         let rows = (<Flex gap="gap.small" vAlign="center" column>
             {this.state.tasks.map((task: ITask, index: number) => {
@@ -231,7 +229,6 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
                                     className="add-task-datepicker"
                                     theme=""
                                     selectedDate={task.startDate}
-                                    maxDate={this.props.projectEndDate}
                                     minDate={this.props.projectStartDate}
                                     onDateSelect={(date: Date) => this.onStartDateChange(index, date)}
                                     disableSelectionForPastDate={false}
@@ -242,7 +239,6 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
                                 theme=""
                                 selectedDate={task.startDate}
                                 minDate={this.props.projectStartDate}
-                                maxDate={this.props.projectEndDate}
                                 onDateSelect={(date: Date) => this.onStartDateChange(index, date)}
                                 disableSelectionForPastDate={false}
                             />
@@ -255,8 +251,7 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
                                     className="add-task-datepicker"
                                     theme=""
                                     selectedDate={task.endDate}
-                                    minDate={this.state.tasks[index].startDate}
-                                    maxDate={this.props.projectEndDate}
+                                    minDate={this.props.projectStartDate}
                                     onDateSelect={(date: Date) => this.onEndDateChange(index, date)}
                                     disableSelectionForPastDate={false}
                                 />
@@ -265,8 +260,7 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
                                 className="add-task-datepicker"
                                 theme=""
                                 selectedDate={task.endDate}
-                                minDate={this.state.tasks[index].startDate}
-                                maxDate={this.props.projectEndDate}
+                                minDate={this.props.projectStartDate}
                                 onDateSelect={(date: Date) => this.onEndDateChange(index, date)}
                                 disableSelectionForPastDate={false}
                             />
@@ -278,72 +272,38 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
                 </Flex>
                 return row;
             })}
-            <Button className="add-row-button" icon={<AddIcon outline />} content={this.localize("addRowButtonLabel")} onClick={this.onTaskRowAdded} />
+            <Button className="add-row-button" icon={<AddIcon outline />} content={this.localize("addRowButtonLabel")} onClick={this.onTaskRowAdded}/>
         </Flex>);
         return rows;
     }
 
     /**Render view for mobile */
     renderMobileInput = () => {
-        let counter = 0;
-        let rows = (<Flex gap="gap.small" vAlign="center" column>
-            {this.state.tasks.map((task: ITask, index: number) => {
-                let row = <Flex key={`project-task-${index}`} gap="gap.medium">
-                    <Text size="small" content={`${++counter}.`} design={{ marginTop: index === 0 ? "2.5rem" : "0" }} />
-                    {
-                        <Flex column>
-                            <Flex gap="gap.small" vAlign="center">
-                                <Flex column gap="gap.small" fill>
-                                    <Text size="small" content={this.localize("taskNameLabel")} />
-                                    <Input
-                                        className="input"
-                                        type="text"
-                                        placeholder={this.localize('taskNameInputPlaceholder')}
-                                        onChange={(event: any) => this.onTaskInputChange(index, event.target.value)}
-                                        value={task.title}
-                                        title={task.title}
-                                        fluid
-                                    />
-                                </Flex>
-                                <CloseIcon
-                                    className="cursor-pointer"
-                                    design={{ marginTop: index === 0 ? "2.5rem" : "0" }}
-                                    onClick={() => { this.onDeleteTask(index) }} />
-                            </Flex>
-                            <Flex gap="gap.small">
-                                <Flex column gap="gap.small">
-                                    <Text size="small" content={this.localize("addTaskStartDate")} />
-                                    <DatePickerWrapper
-                                        className="add-task-datepicker"
-                                        theme=""
-                                        selectedDate={task.startDate}
-                                        minDate={this.props.projectStartDate}
-                                        maxDate={this.props.projectEndDate}
-                                        onDateSelect={(date: Date) => this.onStartDateChange(index, date)}
-                                        disableSelectionForPastDate={false}
-                                    />
-                                </Flex>
-                                <Flex column gap="gap.small">
-                                    <Text size="small" content={this.localize("addTaskEndDate")} />
-                                    <DatePickerWrapper
-                                        className="add-task-datepicker"
-                                        theme=""
-                                        selectedDate={task.endDate}
-                                        minDate={this.state.tasks[index].startDate}
-                                        maxDate={this.props.projectEndDate}
-                                        onDateSelect={(date: Date) => this.onEndDateChange(index, date)}
-                                        disableSelectionForPastDate={false}
-                                    />
-                                </Flex>
-                            </Flex>
-                        </Flex>
-                    }
+        return (
+            <div>
+                <Flex vAlign="center">
+                    <Flex.Item push>
+                        <Button primary text content={<Text className="add-button" content={this.localize("addButtonLabel")} weight="semibold" />}  onClick={this.handleDoneButtonClick} />
+                    </Flex.Item>
                 </Flex>
-                return row;
-            })}
-            <Button className="add-row-button" icon={<AddIcon outline />} content={this.localize("addRowButtonLabel")} onClick={this.onTaskRowAdded} />
-        </Flex>);
-        return rows;
+                <Flex gap="gap.medium" vAlign="center" className="mobile-input-container" >
+                    <Icon iconName="Org" className="add-task-icon"/>
+                    <Flex column className="mobile-input">
+                        <Text className="input-title input-element" content={this.localize("addTasksLabel") } />
+                        <Input 
+                            className="input-element"
+                            type="text"
+                            placeholder={this.localize('taskNameInputMobilePlaceholder')}
+                            onChange={(event: any) => this.onMobileInputChange(event.target.value)}
+                            value={this.state.mobileInput}
+                            title={this.state.mobileInput}
+                            fluid
+                            inverted
+                        />
+                    </Flex>
+                </Flex>
+            </div>
+        );
     }
 
     /** Renders the component*/
@@ -352,25 +312,32 @@ class AddTask extends React.Component<IAddTaskProps, IAddTaskState> {
             return <Loader />;
         }
 
-        return (
-            <div className="add-task-container">
-                <Flex column fill >
-                    <Text content={this.localize("addTaskTaskModuleHeader")} weight="semibold" /><br />
-                    <div className={this.props.isMobileView ? "input-rows-mobile" : "input-rows-desktop"}>
-                        {!this.props.isMobileView && this.renderTaskInputRow()}
-                        {this.props.isMobileView && this.renderMobileInput()}
-                    </div>
-                </Flex>
-                { this.props.isAddTaskOnDoneClick ?
-                    <div className="footer">
-                        <Flex>
-                            <Flex.Item push>
-                                <Button primary className="action-button" content={this.localize("doneButtonLabel")} onClick={this.handleDoneButtonClick} />
-                            </Flex.Item>
-                        </Flex>
-                    </div> : null}
-            </div>);
-
+        if (!this.props.isMobileView){
+            return (
+                <div className="add-task-container"> 
+                    <Flex column fill >
+                        <Text content={this.localize("addTaskTaskModuleHeader")} weight="semibold" /><br />
+                        <div className={this.props.isMobileView ? "input-rows-mobile" : "input-rows-desktop"}>
+                            {!this.props.isMobileView && this.renderTaskInputRow()}
+                        </div>
+                    </Flex>
+                    { this.props.isAddTaskOnDoneClick ?
+                        <div className="footer">
+                            <Flex>
+                                <Flex.Item push>
+                                    <Button primary className="action-button" content={this.localize("doneButtonLabel")} onClick={this.handleDoneButtonClick} />
+                                </Flex.Item>
+                            </Flex>
+                        </div> : null }
+                </div>);
+        }
+        else {
+            return (
+                <div className="add-task-container"> 
+                    {this.renderMobileInput()}
+                </div>);
+        }
+        
     }
 }
 

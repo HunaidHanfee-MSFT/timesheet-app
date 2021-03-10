@@ -51,8 +51,7 @@ class AddMembersByBillingType extends React.Component<IAddPeopleProps, IAddPeopl
     * @param selectedItem selected value of an user
     */
     onBillableUsersChanged = async (selectedItems: IUserDropdownItem[]) => {
-        this.setState({ billableUsers: selectedItems });
-        this.props.onBillableUserChanged(selectedItems);
+        this.setState({ billableUsers: selectedItems }, () => { this.props.onBillableUserChanged(this.state.billableUsers); });
     }
 
     /**
@@ -60,8 +59,7 @@ class AddMembersByBillingType extends React.Component<IAddPeopleProps, IAddPeopl
     * @param selectedItem selected value of an user
     */
     onNonBillableUsersChanged = async (selectedItems: IUserDropdownItem[]) => {
-        this.setState({ nonBillableUsers: selectedItems });
-        this.props.onNonBillableUserChanged(selectedItems);
+        this.setState({ nonBillableUsers: selectedItems}, () => { this.props.onNonBillableUserChanged(this.state.nonBillableUsers); });
     }
 
     /**
@@ -76,7 +74,7 @@ class AddMembersByBillingType extends React.Component<IAddPeopleProps, IAddPeopl
                         <PeoplePicker
                             loadingMessage={this.localize("dropdownSearchLoadingMessage")}
                             noResultMessage={this.localize("noResultFoundDropdownMessage")}
-                            placeholder={this.localize("billableEmployeePlaceholder")}
+                            placeholder={this.localize("startTypingDropdownSearch")}
                             onUserSelectionChanged={this.onBillableUsersChanged}
                             isBillable={true}
                             existingUsers={this.getExistingUsers()}
@@ -89,7 +87,7 @@ class AddMembersByBillingType extends React.Component<IAddPeopleProps, IAddPeopl
                         <PeoplePicker
                             loadingMessage={this.localize("dropdownSearchLoadingMessage")}
                             noResultMessage={this.localize("noResultFoundDropdownMessage")}
-                            placeholder={this.localize("nonBillableEmployeePlaceholder")}
+                            placeholder={this.localize("startTypingDropdownSearch")}
                             onUserSelectionChanged={this.onNonBillableUsersChanged}
                             isBillable={false}
                             existingUsers={this.getExistingUsers()}
@@ -108,7 +106,7 @@ class AddMembersByBillingType extends React.Component<IAddPeopleProps, IAddPeopl
                 <PeoplePicker
                     loadingMessage={this.localize("dropdownSearchLoadingMessage")}
                     noResultMessage={this.localize("noResultFoundDropdownMessage")}
-                    placeholder={this.localize("billableEmployeePlaceholder")}
+                    placeholder={this.localize("startTypingDropdownSearch")}
                     onUserSelectionChanged={this.onBillableUsersChanged}
                     isBillable={true}
                     existingUsers={this.getExistingUsers()}
@@ -117,7 +115,7 @@ class AddMembersByBillingType extends React.Component<IAddPeopleProps, IAddPeopl
                 <PeoplePicker
                     loadingMessage={this.localize("dropdownSearchLoadingMessage")}
                     noResultMessage={this.localize("noResultFoundDropdownMessage")}
-                    placeholder={this.localize("nonBillableEmployeePlaceholder")}
+                    placeholder={this.localize("startTypingDropdownSearch")}
                     onUserSelectionChanged={this.onNonBillableUsersChanged}
                     isBillable={false}
                     existingUsers={this.getExistingUsers()}

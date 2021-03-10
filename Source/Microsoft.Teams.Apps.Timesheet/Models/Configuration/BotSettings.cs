@@ -43,11 +43,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Models
         public int WeeklyEffortsLimit { get; set; }
 
         /// <summary>
-        /// Gets or sets daily efforts limit that can be filled per day.
-        /// </summary>
-        public int DailyEffortsLimit { get; set; }
-
-        /// <summary>
         /// Gets or sets cache duration in hours for storing reportees of manager.
         /// </summary>
         public int ManagerReporteesCacheDurationInHours { get; set; }

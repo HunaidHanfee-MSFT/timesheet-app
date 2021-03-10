@@ -100,8 +100,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Common.Repositories
         {
             var timesheets = this.Context.Timesheets
                 .Where(timesheet => timesheet.UserId.Equals(userObjectId) && timesheetDates.Contains(timesheet.TimesheetDate))
-                .Include(timesheet => timesheet.Task)
-                .Where(timesheet => !timesheet.Task.IsRemoved)
                 .AsEnumerable();
 
             if (!projectIds.IsNullOrEmpty())
@@ -218,9 +216,9 @@ namespace Microsoft.Teams.Apps.Timesheet.Common.Repositories
         public async Task<List<TimesheetEntity>> GetTimesheetsAsync(Guid userId, List<DateTime> timesheetDates)
         {
             return await this.Context.Timesheets
-                .Where(timesheet => timesheetDates.Contains(timesheet.TimesheetDate) && timesheet.UserId == userId)
-                .Include(timesheet => timesheet.Task)
-                .Include(timesheet => timesheet.Task.Project)
+                .Where(x => timesheetDates.Contains(x.TimesheetDate) && x.UserId == userId)
+                .Include(x => x.Task)
+                .Include(x => x.Task.Project)
                 .ToListAsync();
         }
     }

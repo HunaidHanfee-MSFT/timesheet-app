@@ -46,36 +46,37 @@ namespace Microsoft.Teams.Apps.Timesheet.Services.MicrosoftGraph
         public async Task<IEnumerable<User>> GetMyReporteesAsync(string search)
         {
             var reportees = new List<User>();
+            IUserDirectReportsCollectionWithReferencesPage searchedUsers;
 
-            var directReportees = await this.graphServiceClient.Me.DirectReports.Request()
-                .Select("id,displayName,userPrincipalName,mail").GetAsync();
-
-            do
+            if (search != null && search.Length > 0)
             {
-                var searchedReportees = directReportees.CurrentPage;
+                searchedUsers = await this.graphServiceClient.Me.DirectReports.Request()
+                    .Filter($"startsWith(displayName,'{search}') or startsWith(mail,'{search}')").GetAsync();
+            }
+            else
+            {
+                searchedUsers = await this.graphServiceClient.Me.DirectReports.Request()
+                    .Select("id,displayName,userPrincipalName").GetAsync();
+            }
 
-                if (search != null && search.Length > 0)
-                {
-                    searchedReportees = directReportees.CurrentPage.Where(x => ((User)x).DisplayName.Contains(search, StringComparison.CurrentCultureIgnoreCase)
-                        || ((User)x).Mail.Contains(search, StringComparison.InvariantCultureIgnoreCase)).ToList();
-                }
+            foreach (var item in searchedUsers.CurrentPage)
+            {
+                // Explicit casting is required to convert DirectoryObject to User.
+                var myUser = (User)item;
+                reportees.Add(myUser);
+            }
 
-                foreach (var searchedReportee in searchedReportees)
-                {
-                    reportees.Add((User)searchedReportee);
-                }
+            // If there are more result.
+            while (searchedUsers.NextPageRequest != null)
+            {
+                searchedUsers = await searchedUsers.NextPageRequest.GetAsync();
 
-                // If there are more result.
-                if (directReportees.NextPageRequest != null)
+                foreach (var item in searchedUsers.CurrentPage)
                 {
-                    directReportees = await directReportees.NextPageRequest.GetAsync();
-                }
-                else
-                {
-                    break;
+                    var myUser = (User)item;
+                    reportees.Add(myUser);
                 }
             }
-            while (directReportees.CurrentPage != null);
 
             return reportees;
         }

@@ -2,9 +2,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 // </copyright>
+
 import * as React from "react";
 import { ModelType } from "../../constants/constants";
-import { Flex, Status, Text, Checkbox, Button, List, Divider, Avatar, Dialog } from '@fluentui/react-northstar';
+import { Flex, Status, Text, Checkbox, Button, List, Divider, Avatar } from '@fluentui/react-northstar';
 import { CloseIcon, QuestionCircleIcon } from '@fluentui/react-icons-northstar';
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
@@ -84,18 +85,7 @@ const MobileList: React.FunctionComponent<IMobileListProps> = props => {
                                 <Flex.Item push>
                                     {isSelectMultiple
                                         ? <Checkbox key={index} checked={userRequest.isSelected} onChange={() => onItemCheckedChange(userRequest)} />
-                                        : <Flex>
-                                            <Dialog
-                                                design={{ width: "30rem" }}
-                                                header={<Text content={localize("removeMember", { name: userRequest.userName })} weight="semibold" />}
-                                                cancelButton={localize("cancelButtonLabel")}
-                                                confirmButton={localize("removeButtonLabel")}
-                                                onConfirm={() => props.onRemove([userRequest], props.listOption)}
-                                                trigger={
-                                                    <CloseIcon outline className="close-button" />
-                                                }
-                                            />
-                                        </Flex>}
+                                        : <CloseIcon outline className="close-button" onClick={() => props.onRemove([userRequest], props.listOption)} />}
                                 </Flex.Item>
                             </Flex>
                             <Divider />
@@ -139,16 +129,7 @@ const MobileList: React.FunctionComponent<IMobileListProps> = props => {
                                             ? <Checkbox key={index} checked={task.isSelected} onChange={() => onItemCheckedChange(task)} />
                                             : <>
                                                 <Text size="large" content={localize("hours", { hourNumber: task.totalHours })} />
-                                                <Dialog
-                                                    design={{ width: "30rem" }}
-                                                    header={<Text content={localize("removeMember", { name: task.title })} weight="semibold" />}
-                                                    cancelButton={localize("cancelButtonLabel")}
-                                                    confirmButton={localize("removeButtonLabel")}
-                                                    onConfirm={() => props.onRemove([task], props.listOption)}
-                                                    trigger={
-                                                        <CloseIcon outline className="close-button" />
-                                                    }
-                                                />
+                                                <CloseIcon outline className="close-button" onClick={() => props.onRemove([task], props.listOption)} />
                                             </>}
                                     </Flex>
                                 </Flex.Item>
@@ -210,10 +191,10 @@ const MobileList: React.FunctionComponent<IMobileListProps> = props => {
     const getItemsCountText = () => {
         switch (props.listOption) {
             case ModelType.Member:
-                return `${props.listDetails.length} ${localize("membersMobile")}`;
+                return `${props.listDetails.length} ${localize("members")}`;
 
             case ModelType.Task:
-                return `${props.listDetails.length} ${localize("tasksMobile")}`;
+                return `${props.listDetails.length} ${localize("tasks")}`;
         }
     };
 

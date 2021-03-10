@@ -41,14 +41,11 @@
 
     .input-rows-desktop {
         min-height: 10rem;
-        max-height: 65vh;
-        overflow-y: auto;
     }
 
     .input-rows-mobile {
-        min-height: 10rem;
-        max-height: 65vh;
-        overflow-y: auto;
+        height: 20rem;
+        overflow-y: scroll;
     }
 
     .full-width.add-task-datepicker {
@@ -65,13 +62,5 @@
         padding-right: 3rem;
         align-content: flex-end;
         background-color: white;
-
-        .dark-container & {
-            background-color: #2D2C2C;
-        }
-
-        .high-contrast-container & {
-            background-color: #000;
-        }
     }
 }

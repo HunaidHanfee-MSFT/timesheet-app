@@ -5,9 +5,9 @@
 
 import * as React from "react";
 import withContext, { IWithContext } from "../../providers/context-provider";
-import { Flex, Provider, Accordion, Text, Button, Dropdown, Loader, AddIcon, EyeSlashIcon } from '@fluentui/react-northstar';
+import { Flex, Provider, Accordion, Text, Button, Dropdown, Loader } from '@fluentui/react-northstar';
 import { Icon } from 'office-ui-fabric-react';
-import { ModelType } from "../../constants/constants";
+import { ModelType, ResponseStatus } from "../../constants/constants";
 import { WithTranslation, withTranslation } from "react-i18next";
 import ProjectDetails from "./project-details";
 import AddPeopleWrapper from "./add-people-wrapper";
@@ -26,8 +26,7 @@ import { Guid } from "guid-typescript";
 import { getProjectUtilizationAsync, deleteMembersAsync, deleteTasksAsync, getProjectMembersOverviewAsync, getProjectTasksOverviewAsync, createTasksAsync, addMembersAsync } from "../../api/project";
 import { getUserProfiles } from "../../api/users";
 import { withRouter, RouteComponentProps } from "react-router-dom";
-import IUser from "../../models/user";
-import { StatusCodes } from "http-status-codes";
+import IUser from "../../models/User";
 
 import "./manage-project.scss";
 
@@ -44,7 +43,9 @@ interface IManageProjectState {
     isAddTask: boolean;
     isMobileTaskList: boolean;
     monthDropdownValue: string;
-    isForbidden: boolean;
+}
+
+interface IManageProjectProps extends WithTranslation, IWithContext, RouteComponentProps {
 }
 
 interface IManageProjectParams {
@@ -52,13 +53,10 @@ interface IManageProjectParams {
     isMobileView: boolean,
 }
 
-interface IManageProjectProps extends WithTranslation, IWithContext, RouteComponentProps {
-}
-
 // Renders task module for project utilization.
 class ManageProject extends React.Component<IManageProjectProps, IManageProjectState> {
     readonly localize: TFunction;
-    params: { projectId?: string | undefined, isMobileView: boolean } = { projectId: undefined, isMobileView: false };
+    params: { projectId?: string | undefined, userObjectId?: string | undefined, isMobileView: boolean } = { projectId: undefined, userObjectId: undefined, isMobileView: false };
 
     /**
      * Constructor which initializes state. 
@@ -66,19 +64,16 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
     constructor(props: any) {
         super(props);
         this.localize = this.props.t;
-        let queryParams = this.props.match.params as { projectId?: string | undefined, isMobileView: string };
-        this.params.projectId = queryParams.projectId;
-        this.params.isMobileView = queryParams.isMobileView == "true" ? true : false;
+        this.params = this.props.match.params as IManageProjectParams;
+
         this.state = {
             members: [],
             projectDetails: {
                 id: "",
                 title: "",
-                billableUtilizedHours: 0,
-                billableUnderutilizedHours: 0,
-                nonBillableUtilizedHours: 0,
-                nonBillableUnderutilizedHours: 0,
-                totalHours: 0,
+                billableHours: 0,
+                nonBillableHours: 0,
+                notUtilizedHours: 0,
                 projectEndDate: new Date(),
                 projectStartDate: new Date(),
             },
@@ -91,7 +86,6 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
             isAddPeople: false,
             isAddTask: false,
             isMobileTaskList: false,
-            isForbidden: false,
             monthDropdownValue: "",
         };
     }
@@ -134,12 +128,9 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
         this.setState({ isLoading: true });
         let startEndDate = this.getMonthStartEndDate(month);
         let response = await getProjectUtilizationAsync(projectId, startEndDate[0], startEndDate[1], this.handleTokenAccessFailure);
-        if (response.status === StatusCodes.OK && response.data) {
+        if (response.status === 200 && response.data) {
             const results: IProjectUtilization = response.data;
             this.setState({ projectDetails: results, isLoading: false });
-        }
-        else if (response.status === StatusCodes.FORBIDDEN) {
-            this.setState({ isForbidden: true, isLoading: false });
         }
         else {
             this.setState({ isLoading: false });
@@ -186,9 +177,6 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
             const members = this.mapMembersWithDisplayName(projectMembersOverview, userGraphProfiles);
             this.setState({ members, isLoading: false });
         }
-        else if (response.status === StatusCodes.FORBIDDEN) {
-            this.setState({ isForbidden: true, isLoading: false });
-        }
         else {
             this.setState({ isLoading: false });
         }
@@ -200,7 +188,7 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
      */
     getUsersGraphProfileAsync = async (userIds: Array<string>) => {
         let response = await getUserProfiles(userIds, this.handleTokenAccessFailure);
-        if (response.status === StatusCodes.OK && response.data) {
+        if (response.status === ResponseStatus.OK && response.data) {
             return response.data;
         }
         return null;
@@ -235,9 +223,6 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
         if (response.status === 200 && response.data) {
             const results: Array<IProjectTaskOverview> = response.data;
             this.setState({ tasks: results, isLoading: false });
-        }
-        else if (response.status === StatusCodes.FORBIDDEN) {
-            this.setState({ isForbidden: true, isLoading: false });
         }
         else {
             this.setState({ isLoading: false });
@@ -352,7 +337,7 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
         let selectedTaskIds = selectedTasks.map((selectedTask: IProjectTaskOverview) => selectedTask.id);
         this.setState({ isTaskLoading: true });
         let response = await deleteTasksAsync(this.params.projectId!, selectedTaskIds, this.handleTokenAccessFailure);
-        if (response.status === StatusCodes.NO_CONTENT) {
+        if (response.status === ResponseStatus.NoContent) {
             selectedTasks.map((selectedTask: IProjectTaskOverview) => {
                 let index = tasks.findIndex(task => task.id === selectedTask.id);
                 tasks.splice(index, 1);
@@ -377,7 +362,7 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
         });
         this.setState({ isMemberLoading: true });
         let response = await deleteMembersAsync(this.params.projectId!, selectedMembers, this.handleTokenAccessFailure);
-        if (response.status === StatusCodes.NO_CONTENT) {
+        if (response.status === ResponseStatus.NoContent) {
             selectedMembers.map((selectedMember: IProjectMemberOverview) => {
                 let index = members.findIndex(member => member.id === selectedMember.id);
                 members.splice(index, 1);
@@ -401,7 +386,7 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
             let currentMonth = new Date().getMonth();
             this.setState({ isMemberLoading: true });
             let response = await addMembersAsync(this.params.projectId!, selectedUsers, this.handleTokenAccessFailure);
-            if (response.status === StatusCodes.OK) {
+            if (response.status === ResponseStatus.OK) {
                 await this.getMembersOverviewAsync(this.params.projectId!, currentMonth);
             }
         }
@@ -525,7 +510,7 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
             });
             this.setState({ isTaskLoading: true });
             let response = await createTasksAsync(this.params.projectId!, tasksOverview, this.handleTokenAccessFailure);
-            if (response.status === StatusCodes.CREATED) {
+            if (response.status === ResponseStatus.Created) {
                 await this.getTasksOverviewAsync(this.params.projectId!, currentMonth);
             }
         }
@@ -605,10 +590,10 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
         else {
             return (
                 <div>
-                    <Flex className="mobile-action-toolkit">
+                    <Flex>
                         <Flex.Item push>
-                            <Flex gap="gap.medium" vAlign="center">
-                                <AddIcon className="mobile-action-button" onClick={this.onAddTaskButtonClick} />
+                            <Flex gap="gap.medium">
+                                <Icon className="mobile-action-button" onClick={this.onAddTaskButtonClick} iconName="Org" />
                                 <Icon className="mobile-action-button" onClick={this.onAddPeopleButtonClick} iconName="AddFriend" />
                             </Flex>
                         </Flex.Item>
@@ -657,14 +642,6 @@ class ManageProject extends React.Component<IManageProjectProps, IManageProjectS
     render() {
         if (this.state.isLoading) {
             return <Loader />;
-        }
-        if (this.state.isForbidden) {
-            return (
-                <Flex column hAlign="center" vAlign="center" design={{ height: "50vh" }}>
-                    <EyeSlashIcon size="medium" />
-                    <Text content={this.localize("manageProjectNotAccessibleMessage")} size="medium" />
-                </Flex>
-            );
         }
 
         return (

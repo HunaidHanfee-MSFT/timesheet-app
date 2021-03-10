@@ -8,7 +8,6 @@ namespace Microsoft.Teams.Apps.Timesheet.ModelMappers
     using System;
     using System.Collections.Generic;
     using System.Linq;
-    using Microsoft.Extensions.Logging;
     using Microsoft.Teams.Apps.Timesheet.Common.Extensions;
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Models;
@@ -18,20 +17,6 @@ namespace Microsoft.Teams.Apps.Timesheet.ModelMappers
     /// </summary>
     public class ProjectMapper : IProjectMapper
     {
-        /// <summary>
-        /// Logs errors and information.
-        /// </summary>
-        private readonly ILogger logger;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ProjectMapper"/> class.
-        /// </summary>
-        /// <param name="logger">Logs errors and information.</param>
-        public ProjectMapper(ILogger<ProjectMapper> logger)
-        {
-            this.logger = logger;
-        }
-
         /// <summary>
         /// Gets project model to be inserted in database.
         /// </summary>
@@ -64,8 +49,6 @@ namespace Microsoft.Teams.Apps.Timesheet.ModelMappers
                     {
                         Title = task.Title,
                         IsRemoved = false,
-                        StartDate = task.StartDate.Date,
-                        EndDate = task.EndDate.Date,
                     }).ToList(),
             };
         }
@@ -131,50 +114,20 @@ namespace Microsoft.Teams.Apps.Timesheet.ModelMappers
         /// Gets project utilization view model to be sent as API response.
         /// </summary>
         /// <param name="project">The project entity model.</param>
-        /// <param name="timesheets">List of timesheet entity model.</param>
-        /// <param name="members">List of project members.</param>
+        /// <param name="timesheets">Collection of timesheet entity model.</param>
         /// <returns>Returns a project utilization view entity model.</returns>
-        public ProjectUtilizationDTO MapForProjectUtilizationViewModel(Project project, IEnumerable<TimesheetEntity> timesheets, IEnumerable<Member> members)
+        public ProjectUtilizationDTO MapForProjectUtilizationViewModel(Project project, IEnumerable<TimesheetEntity> timesheets)
         {
             project = project ?? throw new ArgumentNullException(nameof(project));
-            timesheets = timesheets ?? throw new ArgumentNullException(nameof(timesheets));
-            members = members ?? throw new ArgumentNullException(nameof(members));
 
-            var billableUtilizedHours = 0;
-            var nonBillableUtilizedHours = 0;
-            var membersDictionary = members.ToDictionary(member => member.UserId);
-
-            foreach (var timesheet in timesheets)
-            {
-                if (membersDictionary.TryGetValue(timesheet.UserId, out var member))
-                {
-                    if (member.IsBillable)
-                    {
-                        billableUtilizedHours += timesheet.Hours;
-                    }
-                    else
-                    {
-                        nonBillableUtilizedHours += timesheet.Hours;
-                    }
-                }
-                else
-                {
-                    this.logger.LogError($"Member {timesheet.UserId} is not part of project {project.Id}");
-                    return null;
-                }
-            }
-
+            var totalHours = project.BillableHours + project.NonBillableHours;
             var projectUtilization = new ProjectUtilizationDTO
             {
                 Id = project.Id,
                 Title = project.Title,
-                ProjectStartDate = project.StartDate,
-                ProjectEndDate = project.EndDate,
-                BillableUtilizedHours = billableUtilizedHours,
-                NonBillableUtilizedHours = nonBillableUtilizedHours,
-                BillableUnderutilizedHours = project.BillableHours - billableUtilizedHours,
-                NonBillableUnderutilizedHours = project.NonBillableHours - nonBillableUtilizedHours,
-                TotalHours = project.BillableHours + project.NonBillableHours,
+                BillableHours = project.BillableHours,
+                NonBillableHours = project.NonBillableHours,
+                NotUtilizedHours = totalHours - timesheets.Sum(timesheet => timesheet.Hours),
             };
 
             return projectUtilization;

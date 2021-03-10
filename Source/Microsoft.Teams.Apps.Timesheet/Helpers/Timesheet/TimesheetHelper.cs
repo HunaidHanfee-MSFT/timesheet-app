@@ -7,19 +7,15 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
 {
     using System;
     using System.Collections.Generic;
-    using System.Globalization;
     using System.Linq;
     using System.Threading.Tasks;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
-    using Microsoft.Teams.Apps.Timesheet.Cards;
     using Microsoft.Teams.Apps.Timesheet.Common.Extensions;
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
     using Microsoft.Teams.Apps.Timesheet.ModelMappers;
     using Microsoft.Teams.Apps.Timesheet.Models;
-    using Microsoft.Teams.Apps.Timesheet.Services;
-    using Tasks = System.Threading.Tasks;
 
     /// <summary>
     /// Provides helper methods for managing operations related to timesheet.
@@ -37,16 +33,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         private readonly ITimesheetMapper timesheetMapper;
 
         /// <summary>
-        /// Notification helper instance to send notifications to user.
-        /// </summary>
-        private readonly INotificationHelper notificationHelper;
-
-        /// <summary>
-        /// Instance of adaptive card service to construct notification cards.
-        /// </summary>
-        private readonly IAdaptiveCardService adaptiveCardService;
-
-        /// <summary>
         /// Logs errors and information.
         /// </summary>
         private readonly ILogger logger;
@@ -62,22 +48,16 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <param name="botOptions">A set of key/value application configuration properties.</param>
         /// <param name="repositoryAccessors">The instance of repository accessors.</param>
         /// <param name="timesheetMapper">The instance of timesheet mapper.</param>
-        /// <param name="notificationHelper">Notification helper instance to send notifications to user.</param>
-        /// <param name="adaptiveCardService">Instance of adaptive card service to construct notification cards.</param>
         /// <param name="logger">The ILogger object which logs errors and information.</param>
         public TimesheetHelper(
             IOptions<BotSettings> botOptions,
             IRepositoryAccessors repositoryAccessors,
             ITimesheetMapper timesheetMapper,
-            INotificationHelper notificationHelper,
-            IAdaptiveCardService adaptiveCardService,
             ILogger<TimesheetHelper> logger)
         {
             this.repositoryAccessors = repositoryAccessors;
             this.timesheetMapper = timesheetMapper;
             this.logger = logger;
-            this.notificationHelper = notificationHelper;
-            this.adaptiveCardService = adaptiveCardService;
             this.botOptions = botOptions;
         }
 
@@ -183,7 +163,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         public async Task<List<TimesheetDTO>> SaveTimesheetsAsync(IEnumerable<UserTimesheet> userTimesheets, DateTime clientLocalCurrentDate, Guid userObjectId)
         {
             var userTimesheetsToSave = userTimesheets.Where(timesheet =>
-                timesheet.ProjectDetails != null && timesheet.ProjectDetails.Any(project => project.TimesheetDetails.Any()));
+                timesheet.ProjectDetails != null && timesheet.ProjectDetails.All(project => project.TimesheetDetails.Any()));
 
             // Filter timesheet dates those aren't frozen.
             var notYetFrozenTimesheetDates = this.GetNotYetFrozenTimesheetDates(userTimesheetsToSave.Select(x => x.TimesheetDate), DateTime.UtcNow.Date);
@@ -207,21 +187,12 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
                     {
                         var effortsToSave = this.GetTotalEffortsByDate(new List<UserTimesheet> { userTimesheet });
 
-                        // If daily efforts limit exceeded then skip saving data for invalid dates.
-                        if (effortsToSave > this.botOptions.Value.DailyEffortsLimit)
-                        {
-                            this.logger.LogError("Daily efforts limit({2}) exceeded for date {0}, user {1}.", userTimesheet.TimesheetDate.ToString("O", CultureInfo.CurrentCulture), userObjectId, this.botOptions.Value.DailyEffortsLimit);
-                            continue;
-                        }
-
-                        // If weekly efforts limit exceeded then skip saving data for invalid dates.
                         if (this.WillWeeklyEffortsExceedLimit(userTimesheet.TimesheetDate.Date, effortsToSave, userObjectId))
                         {
-                            this.logger.LogError("Weekly efforts limit({2}) exceeded for date {0}, user {1}.", userTimesheet.TimesheetDate.ToString("O", CultureInfo.CurrentCulture), userObjectId, this.botOptions.Value.WeeklyEffortsLimit);
                             continue;
                         }
 
-                        foreach (var project in userTimesheet.ProjectDetails.Where(project => project.TimesheetDetails.Any()))
+                        foreach (var project in userTimesheet.ProjectDetails)
                         {
                             // Get task Ids for which timesheet needs to be saved.
                             var taskIdsToBeSaved = project.TimesheetDetails.Select(timesheet => timesheet.TaskId);
@@ -294,12 +265,23 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         }
 
         /// <summary>
-        /// Updates the status of all saved timesheets to submitted.
+        /// Saves the timesheets if provided and updates the status of all saved timesheets to submitted.
         /// </summary>
+        /// <param name="clientLocalCurrentDate">The client's local current date.</param>
+        /// <param name="userTimesheetsToSave">The timesheet details that need to be saved.</param>
         /// <param name="userObjectId">The logged-in user object Id.</param>
         /// <returns>Returns true if timesheets submitted successfully. Else returns false.</returns>
-        public async Task<List<TimesheetDTO>> SubmitTimesheetsAsync(Guid userObjectId)
+        public async Task<List<TimesheetDTO>> SubmitTimesheetsAsync(DateTime clientLocalCurrentDate, IEnumerable<UserTimesheet> userTimesheetsToSave, Guid userObjectId)
         {
+            // Save timesheet details.
+            var result = await this.SaveTimesheetsAsync(userTimesheetsToSave, clientLocalCurrentDate, userObjectId);
+
+            // If timesheet details weren't saved, then do not submit them.
+            if (!userTimesheetsToSave.IsNullOrEmpty() && result.IsNullOrEmpty())
+            {
+                return result;
+            }
+
             // Get all saved timesheets of user.
             var savedTimesheets = await this.repositoryAccessors.TimesheetRepository.FindAsync(timesheet =>
                 timesheet.Status == (int)TimesheetStatus.Saved && timesheet.UserId == userObjectId);
@@ -453,33 +435,22 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <returns>Returns true if a timesheet date is frozen. Else return false.</returns>
         public IEnumerable<DateTime> GetNotYetFrozenTimesheetDates(IEnumerable<DateTime> timesheetDates, DateTimeOffset clientLocalCurrentDate)
         {
-            var daysInClientLocalCurrentMonth = DateTime.DaysInMonth(clientLocalCurrentDate.Year, clientLocalCurrentDate.Month);
-            var clientCurrentMonthEndDate = new DateTime(clientLocalCurrentDate.Year, clientLocalCurrentDate.Month, daysInClientLocalCurrentMonth);
-            var timesheetFreezeDayOfMonth = this.botOptions.Value.TimesheetFreezeDayOfMonth;
-
-            // If specified timesheet freeze day of month is greater than total days in current month, then reset
-            // timesheet freeze day to last day of client current month.
-            if (timesheetFreezeDayOfMonth > daysInClientLocalCurrentMonth)
-            {
-                timesheetFreezeDayOfMonth = daysInClientLocalCurrentMonth;
-            }
-
             // Logic to not save or submit timesheet dates after freezing day of month.
-            if (clientLocalCurrentDate.Day >= timesheetFreezeDayOfMonth)
+            if (clientLocalCurrentDate.Day >= this.botOptions.Value.TimesheetFreezeDayOfMonth)
             {
                 var startDateOfCurrentMonth = new DateTime(clientLocalCurrentDate.Year, clientLocalCurrentDate.Month, 01);
 
-                // Get timesheet details for calendar dates those belongs to current month.
+                // Get timesheet details for calendar dates those aren't belong to previous months.
                 return timesheetDates
-                    .Where(timesheetDate => timesheetDate.Date >= startDateOfCurrentMonth && timesheetDate.Date <= clientCurrentMonthEndDate);
+                    .Where(timesheetDate => timesheetDate.Date >= startDateOfCurrentMonth.Date);
             }
             else
             {
-                // Get timesheet details for calendar dates those belongs to previous month and current month.
+                // Get timesheet details for calendar dates from previous months.
                 var previousMonthStartDate = new DateTime(clientLocalCurrentDate.Year, clientLocalCurrentDate.Month, 01).Date.AddMonths(-1);
 
                 return timesheetDates
-                    .Where(timesheetDate => timesheetDate.Date >= previousMonthStartDate.Date && timesheetDate.Date <= clientCurrentMonthEndDate);
+                    .Where(timesheetDate => timesheetDate.Date >= previousMonthStartDate.Date);
             }
         }
 
@@ -507,7 +478,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <returns>Returns true if timesheets approved or rejected successfully. Else returns false.</returns>
         public async Task<bool> ApproveOrRejectTimesheetsAsync(IEnumerable<TimesheetEntity> timesheets, IEnumerable<RequestApprovalDTO> timesheetApprovals, TimesheetStatus status)
         {
-            var timesheetsDetailsToSend = timesheets.ToList();
+            var timesheetsToUpdateCount = timesheets.Count();
 
 #pragma warning disable CA1062 // Null check is handled by controller.
             foreach (var timesheetRequest in timesheets)
@@ -524,16 +495,15 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
                 {
                     this.repositoryAccessors.TimesheetRepository.Update(timesheets);
                     var responseCount = await this.repositoryAccessors.SaveChangesAsync();
-                    if (responseCount == timesheetsDetailsToSend.Count)
+                    if (responseCount == timesheetsToUpdateCount)
                     {
                         transaction.Commit();
-                        await this.SendNotificationsAsync(timesheetsDetailsToSend, status);
                         return true;
                     }
                 }
-#pragma warning disable CA1031 // Catching general exception to roll back transaction
+#pragma warning disable CA1031 // Handled general exception
                 catch
-#pragma warning restore CA1031 // Catching general exception to roll back transaction
+#pragma warning restore CA1031 // Handled general exception
                 {
                     transaction.Rollback();
                 }
@@ -573,7 +543,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         {
             // Check if timesheet request has status 'Submitted' and saved against project which has been created by logged in manager.
             var validTimesheets = this.repositoryAccessors.TimesheetRepository
-                .GetSubmittedTimesheetByIds(managerObjectId, timesheetIds);
+                    .GetSubmittedTimesheetByIds(managerObjectId, timesheetIds);
             var validTimesheetIds = validTimesheets.Select(validTimesheetRequest => validTimesheetRequest.Id);
 
             // Check if all user provided Ids matches with database timesheets.
@@ -583,138 +553,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
             }
 
             return null;
-        }
-
-        /// <summary>
-        /// Send timesheet approval or rejection notifications to users.
-        /// </summary>
-        /// <param name="timesheets">Details of timesheets which got approved/rejected.</param>
-        /// <param name="status">Status of timesheet approval.</param>
-        /// <returns>Task represent async operation.</returns>
-        internal async Tasks.Task SendNotificationsAsync(IEnumerable<TimesheetEntity> timesheets, TimesheetStatus status)
-        {
-            var timesheetsGroupedByUser = timesheets.Where(timesheet => timesheet.Hours > 0).GroupBy(timesheet => timesheet.UserId);
-            foreach (var userTimesheets in timesheetsGroupedByUser)
-            {
-                var userConversation = await this.repositoryAccessors.ConversationRepository.GetAsync(userTimesheets.First().UserId);
-
-                // If user conversation Id is not stored in database then skip user.
-                if (userConversation == null)
-                {
-                    continue;
-                }
-
-                var groupedByProject = userTimesheets.GroupBy(timesheet => timesheet.Task.ProjectId);
-
-                // Group by project to send projectwise notification cards.
-                foreach (var projectwiseTimesheets in groupedByProject)
-                {
-                    var projectwiseTimesheetsOrderdByDate = projectwiseTimesheets.OrderBy(timesheet => timesheet.TimesheetDate);
-                    var timesheetsGroupedByDateSequence = this.GetTimesheetsGroupedByDateSequence(projectwiseTimesheetsOrderdByDate);
-
-                    foreach (var groupedTimesheets in timesheetsGroupedByDateSequence)
-                    {
-                        var managerComment = status == TimesheetStatus.Rejected ? groupedTimesheets.First().ManagerComments : string.Empty;
-                        var card = this.PrepareCard(groupedTimesheets, managerComment);
-                        await this.NotifyUserAsync(card, userConversation, status);
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Generate adaptive card for notification.
-        /// </summary>
-        /// <param name="groupedTimesheets">List of timesheets of a user.</param>
-        /// <param name="managerComment">Manager comment in case if timesheets are rejected.</param>
-        /// <returns>An adaptive card.</returns>
-        internal ApproveRejectCard PrepareCard(List<TimesheetEntity> groupedTimesheets, string managerComment = null)
-        {
-            var firstTimesheet = groupedTimesheets[0];
-            var lastTimesheet = groupedTimesheets[groupedTimesheets.Count - 1];
-            var isTimesheetForOneDay = firstTimesheet.TimesheetDate.Date == lastTimesheet.TimesheetDate.Date;
-            return new ApproveRejectCard
-            {
-                Date = isTimesheetForOneDay ? this.GetAdaptiveCardDateString(firstTimesheet.TimesheetDate)
-                    : this.GetAdaptiveCardDateString(firstTimesheet.TimesheetDate) + " - " + this.GetAdaptiveCardDateString(lastTimesheet.TimesheetDate),
-                Hours = Convert.ToString(groupedTimesheets.Sum(timesheet => timesheet.Hours), CultureInfo.InvariantCulture),
-                ProjectTitle = firstTimesheet.Task.Project.Title,
-                Comment = managerComment,
-            };
-        }
-
-        /// <summary>
-        /// Generate adaptive card for notification.
-        /// </summary>
-        /// <param name="cardDetails">Adaptive card to be sent.</param>
-        /// <param name="userConversation">User conversation.</param>
-        /// <param name="status">Status of timesheet approval.</param>
-        /// <returns>Task represent async operation.</returns>
-        internal async Tasks.Task NotifyUserAsync(ApproveRejectCard cardDetails, Conversation userConversation, TimesheetStatus status)
-        {
-            if (status == TimesheetStatus.Approved)
-            {
-                var approvedCardAttachment = this.adaptiveCardService.GetApprovedNotificationCard(cardDetails);
-
-                await this.notificationHelper.SendNotificationToUserAsync(userConversation, approvedCardAttachment);
-            }
-            else if (status == TimesheetStatus.Rejected)
-            {
-                var rejectedCardAttachment = this.adaptiveCardService.GetRejectedNotificationCard(cardDetails);
-                await this.notificationHelper.SendNotificationToUserAsync(userConversation, rejectedCardAttachment);
-            }
-        }
-
-        /// <summary>
-        /// Create groups of timesheets by date sequence.
-        /// Ex. If timesheet dates are [1,2,4,6,7,8] then timesheets will be divided in 3 groups
-        /// as [1,2],[4],[6,7,8].
-        /// </summary>
-        /// <param name="projectwiseTimesheetsOrderedByDate">List of timesheets grouped by project.</param>
-        /// <returns>List of timesheets grouped by date sequence.</returns>
-        internal List<List<TimesheetEntity>> GetTimesheetsGroupedByDateSequence(IEnumerable<TimesheetEntity> projectwiseTimesheetsOrderedByDate)
-        {
-            var timesheetsGroupedByDateSequence = new List<List<TimesheetEntity>>();
-
-            if (!projectwiseTimesheetsOrderedByDate.Any())
-            {
-                return timesheetsGroupedByDateSequence;
-            }
-
-            var timesheetsSubList = new List<TimesheetEntity>();
-            TimesheetEntity lastTimesheet = new TimesheetEntity();
-
-            foreach (var timesheet in projectwiseTimesheetsOrderedByDate)
-            {
-                // If difference between last timesheet's date and current timesheet's date
-                // is 1 day or its same date then add it to sub-list.
-                if ((timesheet.TimesheetDate == lastTimesheet.TimesheetDate)
-                    || (timesheet.TimesheetDate.AddDays(-1) == lastTimesheet.TimesheetDate))
-                {
-                    timesheetsSubList.Add(timesheet);
-                }
-                else
-                {
-                    // If difference between last timesheet's date and current timesheet's date
-                    // is more than 1 day then add sub-list to parent list and reset the sub-list to add new timesheet sequence.
-                    // Sub-list will be empty initially.
-                    if (timesheetsSubList.Any())
-                    {
-                        timesheetsGroupedByDateSequence.Add(timesheetsSubList);
-                    }
-
-                    timesheetsSubList = new List<TimesheetEntity>
-                    {
-                        timesheet,
-                    };
-                }
-
-                lastTimesheet = timesheet;
-            }
-
-            // Add last sub-list to parent.
-            timesheetsGroupedByDateSequence.Add(timesheetsSubList);
-            return timesheetsGroupedByDateSequence;
         }
 
         /// <summary>
@@ -731,8 +569,10 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
 
             var timesheetsOfWeek = this.repositoryAccessors.TimesheetRepository.GetTimesheetsOfUser(startOfWeek, endOfWeek, userObjectId);
 
-            // Filter out timesheets other than current timesheet date received.
-            timesheetsOfWeek = timesheetsOfWeek.Where(timesheet => timesheet.TimesheetDate != timesheetDate.Date);
+            if (timesheetsOfWeek.IsNullOrEmpty())
+            {
+                return false;
+            }
 
             var filledEffortsForWeek = timesheetsOfWeek.Sum(timesheet => timesheet.Hours);
 
@@ -763,16 +603,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
             }
 
             return totalEfforts;
-        }
-
-        /// <summary>
-        /// Get adaptive card date string which utilizes date format feature.
-        /// </summary>
-        /// <param name="date">Date to be displayed over card.</param>
-        /// <returns>String representing provided date.</returns>
-        private string GetAdaptiveCardDateString(DateTime date)
-        {
-            return "{{DATE(" + date.ToString("yyyy'-'MM'-'dd'T'HH':'mm':'ss'Z'", CultureInfo.InvariantCulture) + ")}}";
         }
     }
 }

@@ -15,7 +15,6 @@ import "./styles/site.scss";
 
 // To avoid local to UTC date-time conversion happening while converting to JSON.
 Date.prototype.toJSON = function () { return moment(this).format("YYYY-MM-DD"); }
-Date.prototype.toISOString = function () { return moment(this).format("YYYY-MM-DD"); }
 
 export interface IAppState {
     theme: string,
@@ -28,7 +27,7 @@ export default class App extends React.Component<{}, IAppState> {
         super(props);
         this.state = {
             theme: Themes.default,
-            isMobileView: window.outerWidth <= Constants.maxWidthForMobileView
+            isMobileView: window.innerWidth <= Constants.maxWidthForMobileView
         }
     }
 
@@ -51,7 +50,7 @@ export default class App extends React.Component<{}, IAppState> {
     }
 
     onScreenResize = () => {
-        this.setState({ isMobileView: window.outerWidth <= Constants.maxWidthForMobileView });
+        this.setState({ isMobileView: window.innerWidth <= Constants.maxWidthForMobileView });
     }
 
     // Renders component based on Microsoft Teams's theme.

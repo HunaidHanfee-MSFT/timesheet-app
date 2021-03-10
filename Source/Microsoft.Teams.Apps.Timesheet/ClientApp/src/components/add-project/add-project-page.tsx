@@ -7,7 +7,7 @@ import * as React from "react";
 import { WithTranslation, withTranslation } from "react-i18next";
 import { Flex, Provider, Loader } from '@fluentui/react-northstar'
 import { TFunction } from "i18next";
-import IProject from "../../models/project";
+import IProject from "../../models/Project";
 import Step1 from "./step1";
 import Step2 from "./step2";
 import { Guid } from "guid-typescript";

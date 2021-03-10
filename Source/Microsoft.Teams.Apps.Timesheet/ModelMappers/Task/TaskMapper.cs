@@ -3,7 +3,7 @@
 // Licensed under the MIT license.
 // </copyright>
 
-namespace Microsoft.Teams.Apps.Timesheet.ModelMappers
+namespace Microsoft.Teams.Apps.Timesheet.ModelMappers.Task
 {
     using System;
     using System.Collections.Generic;

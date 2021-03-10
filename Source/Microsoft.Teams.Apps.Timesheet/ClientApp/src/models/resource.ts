@@ -5,6 +5,5 @@
 
 export default interface IResource {
     timesheetFreezeDayOfMonth: number;
-    dailyEffortsLimit: number;
     weeklyEffortsLimit: number;
 }

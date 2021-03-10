@@ -7,7 +7,6 @@ import * as React from "react";
 import { Dropdown, DropdownProps } from "@fluentui/react-northstar";
 import { getReportees } from "../../../api/users";
 import { withRouter, RouteComponentProps } from "react-router-dom";
-import IUserSearchResult from "../../../models/user-search-result";
 
 interface IDropdownProps extends RouteComponentProps {
     onUserSelectionChanged: (selectedItems: IUserDropdownItem[]) => void;
@@ -24,6 +23,12 @@ export interface IUserDropdownItem {
     id: string;
     email: string;
     isBillable: boolean;
+}
+
+interface IUserSearchResult {
+    displayName: string;
+    id: string;
+    userPrincipalName: string;
 }
 
 /** Allows to search and multiselect users  */
@@ -61,9 +66,9 @@ const PeoplePicker: React.FunctionComponent<IDropdownProps> = props => {
     };
 
     /**
-    * Invoked when user changes search input
-    * @param e Event details.
-    */
+	* Invoked when user changes search input
+	* @param e Event details.
+	*/
     const initiateSearch = (e: any, { searchQuery }: DropdownProps) => {
         if (timeout) {
             window.clearTimeout(timeout);
@@ -80,14 +85,14 @@ const PeoplePicker: React.FunctionComponent<IDropdownProps> = props => {
     };
 
     /** Invoked when either user is added or removed */
-    const onUserSelectionChanged = (event: any, data: DropdownProps) => {
-        props.onUserSelectionChanged(data.value as IUserDropdownItem[]);
+    const onUserSelectionChanged = (event, data) => {
+        props.onUserSelectionChanged(data.value);
     }
 
     /**
-    * Invoked when user opens or closes search dropdown
-    * @param e Event details.
-    */
+	* Invoked when user opens or closes search dropdown
+	* @param e Event details.
+	*/
     const onOpenChange = (e: any, { open, value }: DropdownProps) => {
         if (open) {
             setLoading(true);

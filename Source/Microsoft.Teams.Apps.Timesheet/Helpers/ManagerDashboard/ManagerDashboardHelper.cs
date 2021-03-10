@@ -114,14 +114,8 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
 
             foreach (var project in projects)
             {
-                var timesheetsToMap = Enumerable.Empty<TimesheetEntity>();
-                if (timesheetDictionary.ContainsKey(project.Id))
-                {
-                    timesheetsToMap = timesheetDictionary[project.Id];
-                }
-
                 dashboardProjects
-                    .Add(this.managerDashboardMapper.MapForDashboardProjectViewModel(project, timesheetsToMap));
+                    .Add(this.managerDashboardMapper.MapForDashboardProjectViewModel(project, timesheetDictionary[project.Id]));
             }
 
             return dashboardProjects;

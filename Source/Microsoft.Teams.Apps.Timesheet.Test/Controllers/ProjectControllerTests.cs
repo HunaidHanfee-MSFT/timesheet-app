@@ -19,7 +19,8 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.Controllers
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
     using Microsoft.Teams.Apps.Timesheet.Controllers;
     using Microsoft.Teams.Apps.Timesheet.Helpers;
-    using Microsoft.Teams.Apps.Timesheet.ModelMappers;
+    using Microsoft.Teams.Apps.Timesheet.Helpers.Task;
+    using Microsoft.Teams.Apps.Timesheet.ModelMappers.Task;
     using Microsoft.Teams.Apps.Timesheet.Models;
     using Microsoft.Teams.Apps.Timesheet.Tests.Fakes;
     using Microsoft.Teams.Apps.Timesheet.Tests.TestData;

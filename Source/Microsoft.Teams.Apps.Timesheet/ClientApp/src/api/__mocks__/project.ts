@@ -3,21 +3,18 @@
 // Licensed under the MIT license.
 // </copyright>
 
-import { StatusCodes } from "http-status-codes";
+import { ResponseStatus } from "../../constants/constants";
 import IProjectMember from "../../models/project-member";
 import IProjectMemberOverview from "../../models/project-member-overview";
 import IProjectTaskOverview from "../../models/project-task-overview";
 import IProjectUtilization from "../../models/project-utilization";
 import { Guid } from "guid-typescript";
-import { IDashboardProject } from "../../models/dashboard/dashboard-project";
 
 const projectUtilization: IProjectUtilization = {
-    billableUtilizedHours: 30,
-    nonBillableUtilizedHours: 30,
-    billableUnderutilizedHours: 20,
-    nonBillableUnderutilizedHours: 20,
-    totalHours: 100,
+    billableHours: 30,
     id: "1212",
+    nonBillableHours: 22,
+    notUtilizedHours: 2,
     title: "Test",
     projectEndDate: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 1),
     projectStartDate: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() + 2)
@@ -34,28 +31,6 @@ const projectTaskOverview: Array<IProjectTaskOverview> = [
     }
 ];
 
-const dashboardProjects: Array<IDashboardProject> = [
-    {
-        id: Guid.createEmpty(), title: "Project X", totalHours: 5, utilizedHours: 10
-    }
-];
-
-/**
- * Get approved and active project details for dashboard between date range.
- * @param startDate The start date of the date range.
- * @param endDate The end date of the date range.
- * @param  {VoidFunction} handleTokenAccessFailure Call back to handle token access failure and redirect to sign-in page.
- */
-export const getDashboardProjectsAsync = async (
-    startDate: Date,
-    endDate: Date,
-    handleTokenAccessFailure: (error: string) => void) => {
-    return Promise.resolve({
-        data: dashboardProjects,
-        status: StatusCodes.OK
-    });
-};
-
 /**
  * Get project utilization details between date range.
  * @param projectId The project Id of which project details to get.
@@ -68,7 +43,7 @@ export const getProjectUtilizationAsync = async (
     endDate: Date) => {
     return Promise.resolve({
         data: projectUtilization,
-        status: StatusCodes.OK
+        status: ResponseStatus.OK
     });
 };
 
@@ -80,36 +55,7 @@ export const getProjectUtilizationAsync = async (
 export const addMembersAsync = async (members: Array<IProjectMember>) => {
     return Promise.resolve({
         data: true,
-        status: StatusCodes.OK
-    });
-};
-
-/**
- * The API which handles request to update members.
- * @param projectId The Id of the project in which members need to be updated.
- * @param members The details of members to be updated.
- * @param  {VoidFunction} handleTokenAccessFailure Call back to handle token access failure and redirect to sign-in page.
- */
-export const deleteMembersAsync = async (
-    projectId: string,
-    members: Array<IProjectMemberOverview>,
-    handleTokenAccessFailure: (error: string) => void) => {
-    return Promise.resolve({
-        data: true,
-        status: StatusCodes.NO_CONTENT
-    })
-};
-
-/**
- * The API which handles request to update task.
- * @param projectId The Id of the project in which tasks need to be updated.
- * @param tasks The details of tasks to be updated.
- * @param  {VoidFunction} handleTokenAccessFailure Call back to handle token access failure and redirect to sign-in page.
- */
-export const deleteTasksAsync = async (projectId: string, taskIds: Array<string>, handleTokenAccessFailure: (error: string) => void) => {
-    return Promise.resolve({
-        data: true,
-        status: StatusCodes.NO_CONTENT
+        status: ResponseStatus.OK
     });
 };
 
@@ -121,7 +67,7 @@ export const deleteTasksAsync = async (projectId: string, taskIds: Array<string>
 export const updateMembersAsync = async (members: Array<IProjectMemberOverview>) => {
     return Promise.resolve({
         data: true,
-        status: StatusCodes.OK
+        status: ResponseStatus.OK
     });
 };
 
@@ -135,7 +81,7 @@ export const getProjectMembersOverviewAsync = async (projectId: string,
     endDate: Date) => {
     return Promise.resolve({
         data: memberOverview,
-        status: StatusCodes.OK
+        status: ResponseStatus.OK
     });
 };
 
@@ -151,7 +97,7 @@ export const createTasksAsync = async (
     }
     return Promise.resolve({
         data: true,
-        status: StatusCodes.OK
+        status: ResponseStatus.OK
     });
 };
 
@@ -163,7 +109,7 @@ export const updateTasksAsync = async (
     tasks: Array<IProjectTaskOverview>) => {
     return Promise.resolve({
         data: true,
-        status: StatusCodes.OK
+        status: ResponseStatus.OK
     });
 };
 
@@ -179,6 +125,6 @@ export const getProjectTasksOverviewAsync = async (
     endDate: Date) => {
     return Promise.resolve({
         data: projectTaskOverview,
-        status: StatusCodes.OK
+        status: ResponseStatus.OK
     });
 };

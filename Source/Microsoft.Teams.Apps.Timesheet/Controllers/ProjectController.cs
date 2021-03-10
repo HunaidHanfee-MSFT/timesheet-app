@@ -20,7 +20,8 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
     using Microsoft.Teams.Apps.Timesheet.Helpers;
-    using Microsoft.Teams.Apps.Timesheet.ModelMappers;
+    using Microsoft.Teams.Apps.Timesheet.Helpers.Task;
+    using Microsoft.Teams.Apps.Timesheet.ModelMappers.Task;
     using Microsoft.Teams.Apps.Timesheet.Models;
 
     /// <summary>
@@ -351,13 +352,13 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
             }
         }
 
-        /// <summary>
-        /// Get project utilization details between date range for a project.
-        /// </summary>
-        /// <param name="projectId">The project Id of which details to fetch.</param>
-        /// <param name="startDate">Start date of the date range.</param>
-        /// <param name="endDate">End date of the date range.</param>
-        /// <returns>Returns project utilization detail.</returns>
+         /// <summary>
+         /// Get project utilization details between date range for a project.
+         /// </summary>
+         /// <param name="projectId">The project Id of which details to fetch.</param>
+         /// <param name="startDate">Start date of the date range.</param>
+         /// <param name="endDate">End date of the date range.</param>
+         /// <returns>Returns project utilization detail.</returns>
         [HttpGet("{projectId}/utilization")]
         [Authorize(PolicyNames.MustBeManagerPolicy)]
         [Authorize(PolicyNames.MustBeProjectCreatorPolicy)]

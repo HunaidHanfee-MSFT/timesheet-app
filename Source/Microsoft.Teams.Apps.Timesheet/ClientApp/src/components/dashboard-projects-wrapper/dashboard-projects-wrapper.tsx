@@ -1,11 +1,10 @@
-// <copyright file="dashboard-projects-wrapper.tsx" company="Microsoft Corporation">
+// <copyright file="dashboard-projects-wrapper.test.tsx" company="Microsoft Corporation">
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 // </copyright>
 
 import * as React from "react";
 import { Flex, Text } from "@fluentui/react-northstar";
-import { QuestionCircleIcon } from '@fluentui/react-icons-northstar';
 import ProjectCard from "../../components/project-card/project-card";
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
@@ -15,14 +14,13 @@ interface IDashboardProjectsProps extends WithTranslation {
     onProjectCardClick: (projectId: string) => void;
     projects: IDashboardProject[];
     isMobileView: boolean;
-    searchText: string;
 }
 
 /**
  * Renders the project cards for the user.
  * @param props The props of type IDashboardProjectsProps.
  */
-const DashboardProjectsWrapper: React.FunctionComponent<IDashboardProjectsProps> = props => {
+const DashboardProjects: React.FunctionComponent<IDashboardProjectsProps> = props => {
     const localize: TFunction = props.t;
 
     /** 
@@ -30,24 +28,7 @@ const DashboardProjectsWrapper: React.FunctionComponent<IDashboardProjectsProps>
      */
     const renderProjects = () => {
         if (!props.projects || props.projects.length === 0) {
-            return <Flex className="manage-timesheet-request-content" gap="gap.small">
-                <Flex.Item>
-                    <div className="error-container">
-                        <QuestionCircleIcon outline />
-                    </div>
-                </Flex.Item>
-                <Flex.Item grow>
-                    <Flex column gap="gap.small" vAlign="stretch">
-                        <div>
-                            <Text weight="bold" content={localize("noProjectsAvailable")} /><br />
-                            <Text content={
-                                props.searchText !== "" &&
-                                localize("timesheetProjectsNotFoundForSearchedTextDescription", { searchedText: props.searchText })}
-                            />
-                        </div>
-                    </Flex>
-                </Flex.Item>
-            </Flex>;
+            return <Text content={localize("noProjectsAvailable")} />;
         }
 
         let projects = props.projects.map((project: IDashboardProject, index: number) => {
@@ -60,4 +41,4 @@ const DashboardProjectsWrapper: React.FunctionComponent<IDashboardProjectsProps>
     return renderProjects();
 };
 
-export default withTranslation()(DashboardProjectsWrapper);
+export default withTranslation()(DashboardProjects);

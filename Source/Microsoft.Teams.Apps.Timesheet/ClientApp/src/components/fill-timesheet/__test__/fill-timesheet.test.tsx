@@ -4,14 +4,14 @@
 // </copyright>
 
 import * as React from "react";
-import FillTimesheet from "../fill-timesheet";
+import FillTimesheet from "../../fill-timesheet/fill-timesheet";
 import { Provider } from "@fluentui/react-northstar";
 import { render, unmountComponentAtNode } from "react-dom";
 import { act } from "react-dom/test-utils";
 import pretty from "pretty";
 import moment from "moment";
 
-jest.mock("../../../api/project.ts");
+jest.mock("../../../api/project-api.ts");
 jest.mock("../../../api/resource-api.ts");
 jest.mock("../../../api/timesheet-api.ts");
 
@@ -93,5 +93,17 @@ describe("FillTimesheet", () => {
 
         const selectedClassName = document.querySelector(`[data-testid=calendar-date-${calendarDateWithApprovedEfforts}]`)?.getAttribute("class");
         expect(selectedClassName).toContain("selected-date");
+    });
+
+    it("Tests whether timesheet is not filled for selected calendar date", () => {
+        const calendarDateWithNoEfforts: string = moment(startOfCurrentWeek).format("YYYY-MM-DD");
+        const calendarDate = document.querySelector(`[data-testid=calendar-date-${calendarDateWithNoEfforts}]`);
+
+        act(() => {
+            calendarDate?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+        });
+
+        const selectedDateStatus = document.querySelector("[data-testid=selected-date-timesheet-status]");
+        expect(selectedDateStatus?.innerHTML).toBe("TimesheetStatusNotFilled");
     });
 });

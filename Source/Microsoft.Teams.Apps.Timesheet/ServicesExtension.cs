@@ -20,7 +20,9 @@ namespace Microsoft.Teams.Apps.Timesheet
     using Microsoft.Teams.Apps.Timesheet.Bot;
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
     using Microsoft.Teams.Apps.Timesheet.Helpers;
+    using Microsoft.Teams.Apps.Timesheet.Helpers.Task;
     using Microsoft.Teams.Apps.Timesheet.ModelMappers;
+    using Microsoft.Teams.Apps.Timesheet.ModelMappers.Task;
     using Microsoft.Teams.Apps.Timesheet.Models;
     using Microsoft.Teams.Apps.Timesheet.Models.Configuration;
     using Microsoft.Teams.Apps.Timesheet.Services;
@@ -45,7 +47,6 @@ namespace Microsoft.Teams.Apps.Timesheet
                 options.MicrosoftAppId = configuration.GetValue<string>("App:Id");
                 options.MicrosoftAppPassword = configuration.GetValue<string>("App:Password");
                 options.TimesheetFreezeDayOfMonth = configuration.GetValue<int>("App:TimesheetFreezeDayOfMonth");
-                options.DailyEffortsLimit = configuration.GetValue<int>("App:DailyEffortsLimit");
                 options.WeeklyEffortsLimit = configuration.GetValue<int>("App:WeeklyEffortsLimit");
                 options.CardCacheDurationInHour = configuration.GetValue<int>("App:CardCacheDurationInHour");
                 options.ManagerProjectValidationCacheDurationInHours = configuration.GetValue<int>("App:ManagerProjectValidationCacheDurationInHours");
@@ -91,7 +92,7 @@ namespace Microsoft.Teams.Apps.Timesheet
         public static void RegisterHelpers(this IServiceCollection services)
         {
             services.AddTransient<IProjectHelper, ProjectHelper>();
-            services.AddTransient<IAppLifecycleHandler, AppLifecycleHandler>();
+            services.AddSingleton<IAppLifecycleHandler, AppLifecycleHandler>();
             services.AddTransient<IProjectHelper, ProjectHelper>();
             services.AddTransient<IManagerDashboardHelper, ManagerDashboardHelper>();
             services.AddTransient<IUserHelper, UserHelper>();
@@ -99,7 +100,6 @@ namespace Microsoft.Teams.Apps.Timesheet
             services.AddTransient<IManagerDashboardHelper, ManagerDashboardHelper>();
             services.AddTransient<IUserHelper, UserHelper>();
             services.AddTransient<ITaskHelper, TaskHelper>();
-            services.AddTransient<INotificationHelper, NotificationHelper>();
         }
 
         /// <summary>

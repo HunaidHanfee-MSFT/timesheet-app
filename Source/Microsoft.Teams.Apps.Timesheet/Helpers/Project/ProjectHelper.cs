@@ -13,6 +13,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
     using Microsoft.Teams.Apps.Timesheet.ModelMappers;
+    using Microsoft.Teams.Apps.Timesheet.ModelMappers.Task;
     using Microsoft.Teams.Apps.Timesheet.Models;
 
     /// <summary>
@@ -73,7 +74,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <param name="projectDetails">The project details.</param>
         /// <param name="userObjectId">The user object Id of project creator.</param>
         /// <returns>Returns project details.</returns>
-        public async Task<ProjectDTO> CreateProjectAsync(ProjectDTO projectDetails, Guid userObjectId)
+        public async Task<Project> CreateProjectAsync(ProjectDTO projectDetails, Guid userObjectId)
         {
             projectDetails = projectDetails ?? throw new ArgumentNullException(nameof(projectDetails), "Project details cannot be null.");
 
@@ -88,7 +89,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
                     if (await this.context.SaveChangesAsync() > 0)
                     {
                         transaction.Commit();
-                        return this.projectMapper.MapForViewModel(project);
+                        return project;
                     }
                 }
 #pragma warning disable CA1031 // Catching general exception to roll-back transaction.
@@ -174,10 +175,9 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
             }
 
             var timesheets = this.repositoryAccessors.TimesheetRepository.GetTimesheetRequestsByProjectId(projectId, TimesheetStatus.Approved, startDate, endDate);
-            var members = this.repositoryAccessors.MemberRepository.GetAllMembers(projectId);
 
             // Map project with approved timesheet hours.
-            return this.projectMapper.MapForProjectUtilizationViewModel(project, timesheets, members);
+            return this.projectMapper.MapForProjectUtilizationViewModel(project, timesheets);
         }
 
         /// <summary>
@@ -279,9 +279,9 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <returns>Returns true if members are deleted, else false.</returns>
         public async Task<bool> DeleteProjectMembersAsync(IEnumerable<Member> membersToDelete)
         {
-            membersToDelete = membersToDelete ?? throw new ArgumentNullException(nameof(membersToDelete));
-
+#pragma warning disable CA1062 // Null check is handled by controller.
             foreach (var memberToDelete in membersToDelete)
+#pragma warning restore CA1062 // Null check is handled by controller.
             {
                 memberToDelete.IsRemoved = true;
             }
@@ -319,9 +319,9 @@ namespace Microsoft.Teams.Apps.Timesheet.Helpers
         /// <returns>Returns true if tasks are deleted, else false.</returns>
         public async Task<bool> DeleteProjectTasksAsync(IEnumerable<TaskEntity> tasksToDelete)
         {
-            tasksToDelete = tasksToDelete ?? throw new ArgumentNullException(nameof(tasksToDelete));
-
+#pragma warning disable CA1062 // Null check is handled by controller.
             foreach (var taskToDelete in tasksToDelete)
+#pragma warning restore CA1062 // Null check is handled by controller.
             {
                 taskToDelete.IsRemoved = true;
             }

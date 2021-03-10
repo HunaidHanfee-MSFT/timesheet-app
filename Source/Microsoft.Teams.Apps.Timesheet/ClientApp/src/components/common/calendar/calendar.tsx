@@ -62,8 +62,8 @@ const Calendar: React.FunctionComponent<ICalendarProps> = props => {
             let date: Date = moment(currentDate).startOf('day').toDate();
 
             // Check whether timesheet data available for a date
-            let timesheet = props.timesheetData ? props.timesheetData.find((timesheet: IUserTimesheet) =>
-                timesheet.timesheetDate.valueOf() === date.valueOf()) : undefined;
+            let timesheet = props.timesheetData.find((timesheet: IUserTimesheet) =>
+                timesheet.timesheetDate.valueOf() === date.valueOf());
 
             // As the timesheet filled for that day, copy the same data in calendar dates array
             if (timesheet) {
@@ -184,11 +184,6 @@ const Calendar: React.FunctionComponent<ICalendarProps> = props => {
             return false;
         }
 
-        // Freeze timesheet of upcoming months.
-        if (moment(dateToCheck).startOf('day').toDate().valueOf() > moment().endOf('month').startOf('day').toDate().valueOf()) {
-            return true;
-        }
-
         // If today's date is greater than or equal to timesheet freezing day of month.
         if (moment().date() >= props.timesheetFreezeDayOfMonth) {
             // If the date belongs to previous month, then timesheet will get freeze and user can fill timesheet from current month.
@@ -248,7 +243,7 @@ const Calendar: React.FunctionComponent<ICalendarProps> = props => {
             let previousSelectedDate = selectedDate;
 
             setSelectedDate(weekday.date);
-            props.onCalendarActiveDateChange && props.onCalendarActiveDateChange(previousSelectedDate, weekday, isTimesheetDateFrozen(weekday.date, moment().startOf('day').toDate()));
+            props.onCalendarActiveDateChange && props.onCalendarActiveDateChange(previousSelectedDate, weekday, isTimesheetDateFrozen(weekday.date, moment().toDate()));
         }
     }
 
@@ -288,7 +283,7 @@ const Calendar: React.FunctionComponent<ICalendarProps> = props => {
                             className={props.isMobile ? `mobile hours-text ${colorCodeStyleForEfforts}` : `hours-text ${colorCodeStyleForEfforts}`}
                             content={("0" + weekday.hours).slice(-2)}
                             weight="semibold"
-                        /> : <Loader />}
+                        /> : <Loader/>}
                 </Flex>
             );
         });
@@ -330,7 +325,7 @@ const Calendar: React.FunctionComponent<ICalendarProps> = props => {
 
     // Renders component
     return (
-        <Flex data-tid={`calendar-component`} className="calendar" column>
+        <Flex className="calendar" column>
             <Flex vAlign="center" space="between">
                 <Button text iconOnly icon={<ChevronStartIcon size="small" />} onClick={onRequestPreviousCalendarWeek} />
                 <Text content={renderWeekAndMonthHeader()} weight="semibold" />

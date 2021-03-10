@@ -4,31 +4,12 @@
 // </copyright>
 
 .manage-project-container {
-    margin: 0.5rem 3.2rem 0.6rem;
+    margin: 0.5rem 1.5rem 0.6rem;
     width: 100%;
 
     .donut-container {
         height: auto;
-        width: 250px;
         margin-right: 1rem;
-        margin-left: -4rem;
-
-        .total-target-label {
-            margin-top: 1rem;
-            margin-left: 3rem;
-        }
-    }
-
-    .donut-container-mobile {
-        height: auto;
-        width: 200px;
-        margin-right: 1rem;
-        margin-left: -4rem;
-
-        .total-target-label {
-            margin-top: 1rem;
-            margin-left: 3rem;
-        }
     }
 
     .date-dropdown {
@@ -45,46 +26,25 @@
 }
 
 .project-details-container {
-    width: 86vw;
+    background-color: #FFFFFF;
+    margin-right: 2.7rem !important;
     cursor: pointer;
 
     .donut-container {
         overflow: hidden;
     }
 
-    .project-meets-target {
-        color: #13A40E;
-
-        .high-contrast-container & {
-            color: #1aebff;
-        }
-    }
-
-    .below-target-margin {
-        margin-left: 1rem;
-    }
-
-    .project-below-target {
-        color: #C4314B;
-
-        .high-contrast-container & {
-            color: #1aebff;
-        }
-    }
-
-    .mobile-text {
-        width: 40vw;
-    }
-
     .text-container {
         height: 8.6rem;
 
         .status-label-web {
+            color: #252423;
             font-size: 1.2rem;
         }
 
         .status-label-mobile {
-            font-size: 1.2rem;
+            color: #252423;
+            font-size: 1.5rem;
         }
 
         .status-bullets {
@@ -126,13 +86,5 @@
         padding-right: 3rem;
         align-content: flex-end;
         background-color: white;
-
-        .dark-container & {
-            background-color: #2D2C2C;
-        }
-
-        .high-contrast-container & {
-            background-color: #000;
-        }
     }
 }

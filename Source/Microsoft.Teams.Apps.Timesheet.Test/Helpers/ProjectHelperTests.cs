@@ -11,12 +11,12 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.Helpers
     using System.Linq.Expressions;
     using System.Threading;
     using System.Threading.Tasks;
-    using Microsoft.Extensions.Logging;
     using Microsoft.Teams.Apps.Timesheet.Common.Extensions;
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Common.Repositories;
     using Microsoft.Teams.Apps.Timesheet.Helpers;
     using Microsoft.Teams.Apps.Timesheet.ModelMappers;
+    using Microsoft.Teams.Apps.Timesheet.ModelMappers.Task;
     using Microsoft.Teams.Apps.Timesheet.Models;
     using Microsoft.Teams.Apps.Timesheet.Services.MicrosoftGraph;
     using Microsoft.Teams.Apps.Timesheet.Tests.Fakes;
@@ -119,7 +119,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.Helpers
             this.memberRepository = new Mock<IMemberRepository>();
             this.repositoryAccessors = new Mock<IRepositoryAccessors>();
             this.userService = new Mock<IUsersService>();
-            this.projectHelper = new ProjectHelper(this.timesheetContext.Object, this.repositoryAccessors.Object, new ProjectMapper(new Mock<ILogger<ProjectMapper>>().Object), new MemberMapper(), new TaskMapper());
+            this.projectHelper = new ProjectHelper(this.timesheetContext.Object, this.repositoryAccessors.Object, new ProjectMapper(), new MemberMapper(), new TaskMapper());
         }
 
         /// <summary>
@@ -226,7 +226,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.Helpers
             var result = await this.projectHelper.CreateProjectAsync(projectDTO, managerId);
 
             // ASSERT
-            Assert.AreEqual(this.project.ClientName, result.ClientName);
+            Assert.AreEqual(this.project.CreatedBy, result.CreatedBy);
             this.projectRepository.Verify(projectRepo => projectRepo.CreateProject(It.IsAny<Project>()), Times.AtLeastOnce());
         }
 
@@ -350,28 +350,15 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.Helpers
         public async Task GetProjectUtilization_WithValidParams_ShouldReturnValidData()
         {
             // ARRANGE
-            var members = new List<Member>
-            {
-                new Member
-                {
-                    ProjectId = Guid.NewGuid(),
-                    UserId = Guid.Parse("3fd7af65-67df-43cb-baa0-30917e133d94"),
-                    IsBillable = true,
-                    Id = Guid.Parse("54ab7412-f6c1-491d-be16-f797e6903667"),
-                },
-            };
             this.repositoryAccessors.Setup(repositoryAccessor => repositoryAccessor.TimesheetRepository).Returns(() => this.timesheetRepository.Object);
             this.repositoryAccessors.Setup(repositoryAccessor => repositoryAccessor.ProjectRepository).Returns(() => this.projectRepository.Object);
-            this.repositoryAccessors.Setup(repositoryAccessor => repositoryAccessor.MemberRepository).Returns(() => this.memberRepository.Object);
             this.timesheetRepository
                 .Setup(timesheetRepo => timesheetRepo.GetTimesheetRequestsByProjectId(It.IsAny<Guid>(), It.IsAny<TimesheetStatus>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
                 .Returns(TestData.ApprovedTimesheets);
             this.projectRepository
                 .Setup(projectRepo => projectRepo.GetProjectByIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>()))
                 .Returns(Task.FromResult(this.project));
-            this.memberRepository
-                .Setup(projectRepo => projectRepo.GetAllMembers(It.IsAny<Guid>()))
-                .Returns(members);
+
             var managerId = Guid.NewGuid().ToString();
             var projectId = Guid.NewGuid();
             var startDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 5);

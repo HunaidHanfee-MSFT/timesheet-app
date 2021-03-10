@@ -5,8 +5,8 @@
 
 import * as React from "react";
 import Constants, { ModelType } from "../../constants/constants";
-import { Flex, Status, Text, Checkbox, Button, Table, Avatar, Loader, Dialog } from '@fluentui/react-northstar';
-import { CloseIcon, QuestionCircleIcon, TrashCanIcon, AddIcon } from '@fluentui/react-icons-northstar';
+import { Flex, Status, Text, Checkbox, Button, Table, Avatar, Loader } from '@fluentui/react-northstar';
+import { CloseIcon, QuestionCircleIcon, TrashCanIcon } from '@fluentui/react-icons-northstar';
 import { Icon } from 'office-ui-fabric-react';
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
@@ -46,7 +46,7 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
             <div className="manage-project-action">
                 {selectedItems.length > 0
                     ? <Button text icon={<TrashCanIcon className="action-icon" />} content={localize("removeSelected")} onClick={removeSelectedItems} />
-                    : <Button text icon={props.tableOptions === ModelType.Member ? <Icon className="action-icon" iconName="AddFriend" /> : <AddIcon className="action-icon" />} content={props.tableOptions == ModelType.Member ? localize("addMembersLabel") : localize("addTasksLabel")} data-tid={props.tableOptions == ModelType.Member ? "addMemberButton" : "addTaskButton"} onClick={onAddActionClick} />}
+                    : <Button text icon={props.tableOptions === ModelType.Member ? <Icon className="action-icon" iconName="AddFriend" /> : <Icon className="action-icon" iconName="Org" />} content={props.tableOptions == ModelType.Member ? localize("addPeople") : localize("addTasksLabel")} data-tid={props.tableOptions == ModelType.Member ? "addMemberButton" : "addTaskButton"} onClick={onAddActionClick} />}
             </div>
         </Flex.Item>;
         return action;
@@ -109,7 +109,7 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
             <Flex.Item grow>
                 <Flex column gap="gap.small" vAlign="stretch">
                     <div>
-                        {tableOption === ModelType.Member && <Text weight="bold" content={localize("membersNotAvailableHeaderDescription")} />}
+                        {tableOption === ModelType.Member && <Text weight="bold" content={localize("timesheetRequestNotAvailableHeaderDescription")} />}
                         {tableOption === ModelType.Task && <Text weight="bold" content={localize("taskNotAvailableHeaderDescription")} />}
                         <br />
                     </div>
@@ -151,7 +151,7 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
                         design: { minWidth: "10vw", maxWidth: "10vw" }
                     },
                     {
-                        content: localize("memberLabel"),
+                        content: localize("employee"),
                         design: { minWidth: "33vw", maxWidth: "33vw" }
                     },
                     {
@@ -199,17 +199,7 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
                             design: { minWidth: "20vw", maxWidth: "20vw" }
                         },
                         {
-                            content:
-                                <Dialog
-                                    design={{ width: "40rem !important", height: "14.9rem" }}
-                                    header={<Text content={localize("removeMember", { name: userRequest.userName })} weight="semibold" />}
-                                    cancelButton={localize("cancelButtonLabel")}
-                                    confirmButton={<Button primary content={localize("removeButtonLabel")} data-tid={`confirm-member-remove`} />}
-                                    onConfirm={() => props.onRemove([userRequest], props.tableOptions)}
-                                    trigger={
-                                        <CloseIcon outline className="close-button" data-tid={`remove-member-${index}`} />
-                                    }
-                                />,
+                            content: <CloseIcon outline className="close-button" data-tid={`remove-member-${index}`} onClick={() => props.onRemove([userRequest], props.tableOptions)} />,
                             title: localize("closeIconLabel"),
                             truncateContent: true,
                             design: { minWidth: "10vw", maxWidth: "10vw" }
@@ -223,7 +213,6 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
                     data-tid="member-table"
                     header={timesheetRequestTableHeaderItems}
                     rows={rows}
-                    className="utilization-table"
                 />
             );
         }
@@ -281,17 +270,7 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
                             design: { minWidth: "30vw", maxWidth: "30vw" }
                         },
                         {
-                            content:
-                                <Dialog
-                                    design={{ width: "40rem !important", height: "14.9rem" }}
-                                    header={<Text content={localize("removeMember", { name: task.title })} weight="semibold" />}
-                                    cancelButton={localize("cancelButtonLabel")}
-                                    confirmButton={<Button primary content={localize("removeButtonLabel")} data-tid={`confirm-remove-button`} />}
-                                    onConfirm={() => props.onRemove([task], props.tableOptions)}
-                                    trigger={
-                                        <CloseIcon outline className="close-button" data-tid={`remove-task-${index}`} />
-                                    }
-                                />,
+                            content: <CloseIcon outline className="close-button" data-tid={`remove-task-${index}`} onClick={() => props.onRemove([task], props.tableOptions)} />,
                             title: localize("closeIconLabel"),
                             truncateContent: true,
                             design: { minWidth: "20vw", maxWidth: "20vw" }
@@ -305,7 +284,6 @@ const ProjectUtilizationTable: React.FunctionComponent<IProjectUtilizationTableP
                     data-tid="task-table"
                     header={tasksTableHeaderItems}
                     rows={rows}
-                    className="utilization-table"
                 />
             );
         }

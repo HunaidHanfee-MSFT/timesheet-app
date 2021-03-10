@@ -119,7 +119,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.Controllers
                 .Returns(Task.FromResult(new List<User>() as IEnumerable<User>));
 
             // ACT
-            var result = (ObjectResult)await this.userController.GetMyReporteesAsync("random");
+            var result = (ObjectResult)await this.userController.GetReporteesAsync("random");
 
             // ASSERT
             Assert.AreEqual(result.StatusCode, StatusCodes.Status200OK);

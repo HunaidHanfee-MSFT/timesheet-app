@@ -6,11 +6,9 @@
 export default interface IProjectUtilization {
     id: string;
     title: string;
-    billableUtilizedHours: number;
-    billableUnderutilizedHours: number;
-    nonBillableUtilizedHours: number;
-    nonBillableUnderutilizedHours: number;
-    totalHours: number;
+    billableHours: number;
+    nonBillableHours: number;
+    notUtilizedHours: number;
     projectStartDate: Date;
     projectEndDate: Date;
 }

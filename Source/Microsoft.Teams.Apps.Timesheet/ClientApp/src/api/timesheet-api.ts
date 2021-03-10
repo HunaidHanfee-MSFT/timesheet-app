@@ -15,17 +15,19 @@ import IUserTimesheet from "../models/fill-timesheet/user-timesheet";
  * @param  {VoidFunction} handleTokenAccessFailure Call back to handle token access failure and redirect to sign-in page.
  */
 export const saveTimesheetAsync = async (timesheets: IUserTimesheet[], currentDate: Date, handleTokenAccessFailure: (error: string) => void) => {
-    let requestUrl = `/api/timesheets/${moment().format("YYYY-MM-DDTHH:mm:ss")}`;
+    let requestUrl = `/api/timesheets/${moment(currentDate).format("YYYY-MM-DDTHH:mm:ss")}`;
     return axios.post(requestUrl, handleTokenAccessFailure, timesheets);
 }
 
 /**
  * Submits timesheet to manager.
+ * @param timesheets The timesheet data that need to be submitted.
+ * @param currentDate The current date.
  * @param  {VoidFunction} handleTokenAccessFailure Call back to handle token access failure and redirect to sign-in page.
  */
-export const submitTimesheetAsync = async (handleTokenAccessFailure: (error: string) => void) => {
-    let requestUrl = `/api/timesheets/submit`;
-    return axios.post(requestUrl, handleTokenAccessFailure);
+export const submitTimesheetAsync = async (timesheets: IUserTimesheet[], currentDate: Date, handleTokenAccessFailure: (error: string) => void) => {
+    let requestUrl = `/api/timesheets/submit/${moment(currentDate).format("YYYY-MM-DDTHH:mm:ss")}`;
+    return axios.post(requestUrl, handleTokenAccessFailure, timesheets);
 }
 
 /**

@@ -33,32 +33,12 @@ const ProjectCard: React.FunctionComponent<IProjectCardProps> = props => {
         setIsUtilized(hoursUtilized === totalHours);
     }, [props.projectDetail]);
 
-    /**
-     * Get utilization text to show as status.
-     * @param projectDetail Project detail to show.
-     */
-    const getUtilizationText = (projectDetail: IDashboardProject) => {
-        if (projectDetail) {
-            if (projectDetail.utilizedHours > projectDetail.totalHours) {
-                return localize("overUtilizedLabel");
-            }
-            else if (projectDetail.utilizedHours < projectDetail.totalHours) {
-                return localize("underutilizedLabel");
-            }
-            else {
-                return localize("fullyUtilizedLabel");
-            }
-        }
-
-        return "";
-    }
-
     /** 
      * Gets the percentage of project utilization 
      */
     const getPercentage = (projectDetail: IDashboardProject) => {
         if (projectDetail && props.projectDetail.totalHours !== 0) {
-            return (props.projectDetail.utilizedHours / props.projectDetail.totalHours * 100).toFixed(2);
+            return Math.ceil((props.projectDetail.utilizedHours / props.projectDetail.totalHours) * 100);
         }
         return 0;
     };
@@ -71,13 +51,13 @@ const ProjectCard: React.FunctionComponent<IProjectCardProps> = props => {
             (
                 <Flex key={props.projectCardKey} className="project-card-container" vAlign="center" hAlign="center" onClick={() => props.onClick(props.projectDetail.id.toString())}>
                     <Flex.Item >
-                        <CircularProgressbar className="circular-progress" value={getPercentage(props.projectDetail) as number} text={`${getPercentage(props.projectDetail)}%`} />
+                        <CircularProgressbar className="circular-progress" value={getPercentage(props.projectDetail)} text={`${getPercentage(props.projectDetail)}%`} />
                     </Flex.Item>
                     <Flex.Item push>
                         <Flex className="text-container" space="between" column fill>
-                            <Text weight="semibold" className="project-title" title={props.projectDetail.title} content={props.projectDetail.title} truncated />
-                            <Text size="small" className="project-subtitle" content={localize("hoursUtilizedLabel", { utilizedHours: props.projectDetail.utilizedHours, totalHours: props.projectDetail.totalHours })} />
-                            <Text size="small" content={getUtilizationText(props.projectDetail)} className={isUtilized ? "fully-utilized-text" : "underutilized-text"} />
+                            <Text weight="semibold" className="project-title" content={props.projectDetail.title} />
+                            <Text size="small" className="project-subtitle" content={`${props.projectDetail.utilizedHours}/${props.projectDetail.totalHours} ${localize("hoursUtilizeLabel")}`} />
+                            <Text size="small" content={isUtilized ? localize("fullyUtilizedLabel") : localize("underutilizedLabel")} className={isUtilized ? "fully-utilized-text" : "underutilized-text"} />
                         </Flex>
                     </Flex.Item>
                 </Flex>

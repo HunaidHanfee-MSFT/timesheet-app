@@ -20,7 +20,7 @@ import ITimesheet from "../../models/timesheet";
 import { cloneDeep } from "lodash";
 import { approveTimesheetsAsync, rejectTimesheetsAsync } from "../../api/timesheet";
 import { getUserTimesheetsAsync, getUserTimesheetsOverviewAsync } from "../../api/users";
-import Constants from "../../constants/constants";
+import Constants, { ResponseStatus } from "../../constants/constants";
 import { withRouter, RouteComponentProps } from "react-router-dom";
 import { IRequestApproval } from "../../models/request-approval";
 import { Guid } from "guid-typescript";
@@ -61,13 +61,13 @@ const RequestsTabIndex: number = 0;
 const TimesheetTabIndex: number = 1;
 
 // Table's date column width.
-const tableDateColumnWidth: string = "20vw";
+const tableDateColumnWidth: string = "25vw";
 
 // Table's hours column width.
 const tableHoursColumnWidth: string = "20vw";
 
 // Table's project column width.
-const tableProjectsColumnWidth: string = "40vw";
+const tableProjectsColumnWidth: string = "17vw";
 
 // Renders task module for project utilization
 class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewState> {
@@ -140,7 +140,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
      * @param selectedWeek Selected week in calendar.
      * @param userId The user id of which request to fetch.
      */
-    getUserTimesheetDetailsAsync = async (selectedWeek: number, userId: string): Promise<any> => {
+    getUserTimesheetDetailsAsync = async (selectedWeek: number, userId: string) => {
         let startOfWeekDate = moment().week(selectedWeek).startOf('week').toDate();
         let endOfWeekDate = moment().week(selectedWeek).endOf('week').toDate();
         let isExist = this.state.userTimesheet.filter((userTimesheet: IUserTimesheet) => moment(userTimesheet.timesheetDate).week() === selectedWeek);
@@ -158,6 +158,31 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
                 userTimesheet: [...prevState.userTimesheet, ...userTimesheets],
                 isLoading: false,
             }));
+        }
+    }
+
+    /**
+     * Get project title string to show in table.
+     * @param submittedRequest Submitted request for which title string to get.
+     */
+    getProjectTitles = (submittedRequest: ISubmittedRequest) => {
+        var titles = "";
+        if (submittedRequest.projectTitles.length === 1) {
+            return `${submittedRequest.projectTitles[0]}.`;
+        }
+        else {
+            for (var i = 0; i < submittedRequest.projectTitles.length; i++) {
+                if (i === 0) {
+                    titles = `${submittedRequest.projectTitles[i]}`;
+                }
+                else if (i === submittedRequest.projectTitles.length - 1) {
+                    titles = `${titles}, ${submittedRequest.projectTitles[i]}.`;
+                }
+                else {
+                    titles = `${titles}, ${submittedRequest.projectTitles[i]}`;
+                }
+            }
+            return titles;
         }
     }
 
@@ -250,11 +275,6 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
      * Get selected timesheet requests 
      */
     getSelectedTimesheetRequests = () => {
-        if (this.state.isViewTimesheet && this.state.activeTabIndex === TimesheetTabIndex) {
-            return this.state.submittedRequests.filter((submittedRequest: ISubmittedRequest) =>
-                moment(submittedRequest.timesheetDate).startOf('day').toDate().valueOf() === moment(this.state.selectedDateTimesheetStatusForCalendar.date).startOf('day').toDate().valueOf()) as ISubmittedRequest[];
-        }
-
         return this.state.submittedRequests.filter((submittedRequest: ISubmittedRequest) => submittedRequest.isSelected) as ISubmittedRequest[];
     }
 
@@ -263,7 +283,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
      */
     onRejectClick = () => {
         let selectedTimesheetRequests = this.getSelectedTimesheetRequests();
-        if ((this.state.isViewTimesheet && this.state.activeTabIndex === TimesheetTabIndex) || selectedTimesheetRequests.length > 0) {
+        if (selectedTimesheetRequests.length > 0) {
             this.setState((prevState: IRequestReviewState) => ({
                 isRejectClick: !prevState.isRejectClick
             }));
@@ -300,7 +320,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
                 break;
         }
 
-        if (response.status === StatusCodes.NO_CONTENT) {
+        if (response.status === ResponseStatus.NoContent) {
             this.setState({ isLoading: false, userTimesheet: [] });
             this.getUserTimesheetDetailsAsync(this.state.selectedWeek, this.params.userId!);
             return true;
@@ -385,7 +405,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
     /** 
      * Get called when tab selection change.
      */
-    onTabIndexChange = (event: any, tabEventDetails: MenuProps | undefined) => {
+    onTabIndexChange = (event, tabEventDetails: MenuProps | undefined) => {
         this.setState((prevState: IRequestReviewState) => ({
             activeTabIndex: tabEventDetails?.activeIndex!,
             isViewTimesheet: !prevState.isViewTimesheet
@@ -471,17 +491,6 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
     }
 
     /**
-     * Event handler when timesheet is reject from calendar.
-     */
-    onRejectFromTimesheetClick = () => {
-        if (this.state.selectedDateTimesheetStatusForCalendar.status === TimesheetStatus.Submitted || this.state.selectedDateTimesheetStatusForCalendar.status === TimesheetStatus.Approved) {
-            this.setState((prevState: IRequestReviewState) => ({
-                isRejectClick: !prevState.isRejectClick
-            }));
-        }
-    }
-
-    /**
      * Render timesheet requests list
      */
     renderTimesheetRequestsList = () => {
@@ -499,7 +508,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
                                 <Flex space="between">
                                     <Flex.Item>
                                         <Flex column>
-                                            <Text className="title-text" content={`${this.localize("hours", { hourNumber: submittedRequest.totalHours })}, ${moment(submittedRequest.timesheetDate).format("DD MMM YYYY")}`} weight="semibold" />
+                                            <Text className="title-text" content={`${this.localize("hours", { hourNumber: submittedRequest.totalHours })}  ${moment.utc(submittedRequest.timesheetDate).local().format("MMM YY")}`} weight="semibold" />
                                             <Text className="subtitle-text" content={this.getProjectTitles(submittedRequest)} />
                                         </Flex>
                                     </Flex.Item>
@@ -518,14 +527,12 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
             return (
                 <Flex column>
                     <Flex className="list-header" vAlign="center" padding="padding.medium">
-                        <Text className="mobile-title" content={this.localize("requestsTab")} weight="semibold" />
+                        <Text className="mobile-title" content={this.localize("request")} weight="semibold" />
                         <Flex.Item push>
                             <Button text onClick={this.onSelectAllRequestsCheckedChange} content={this.localize("selectAllButtonLabel")} className="mobile-subtitle" />
                         </Flex.Item>
                     </Flex>
-                    <div className="list-container">
-                        <List items={items} />
-                    </div>
+                    <List items={items} />
                 </Flex>
             );
         }
@@ -590,15 +597,14 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
      */
     renderRejectReasonView = () => {
         let selectedTimesheetRequests = this.getSelectedTimesheetRequests();
-        if ((selectedTimesheetRequests && selectedTimesheetRequests.length > 0) || (this.state.isViewTimesheet && this.state.activeTabIndex === TimesheetTabIndex)) {
+        if (selectedTimesheetRequests.length > 0) {
             return (
                 <Flex column gap="gap.medium">
-                    {!this.state.isViewTimesheet && this.state.activeTabIndex !== TimesheetTabIndex && selectedTimesheetRequests && selectedTimesheetRequests.length > 1 && <Text content={`${this.localize("timesheetRejectMultipleDates")}`} />}
-                    {((this.state.isViewTimesheet && this.state.activeTabIndex === TimesheetTabIndex) || (selectedTimesheetRequests &&
-                        selectedTimesheetRequests.length === 1)) && <Text content={this.localize("timesheetRejectLabel", { date: (this.state.isViewTimesheet && this.state.activeTabIndex === TimesheetTabIndex) ? moment(this.state.selectedDateTimesheetStatusForCalendar.date).format("DD/MM/YYYY") : this.formatDate(selectedTimesheetRequests[0]) })} />}
+                    {selectedTimesheetRequests.length > 1 && <Text content={this.localize("timesheetRejectMultipleDates")} />}
+                    {selectedTimesheetRequests.length === 1 && <Text content={`${this.localize("timesheetRejectLabel")} ${this.formatDate(selectedTimesheetRequests[0])}`} />}
                     <Flex column gap="gap.small">
                         <Flex>
-                            <Text content={this.localize("reason")} />
+                            <Text content="Reason" />
                             <Flex.Item push>
                                 {this.getReasonError()}
                             </Flex.Item>
@@ -640,56 +646,27 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
      */
     renderFooter = () => {
         return (
-            <Flex space="between" vAlign="center" className="button-footer">
-                <Flex.Item push >
-                    <Flex gap="gap.small">
-                        {!this.state.isRejectClick && (this.state.activeTabIndex === TimesheetTabIndex || this.state.isViewTimesheet) &&
-                            <>
-                                <Button disabled={this.state.selectedDateTimesheetStatusForCalendar.status !== TimesheetStatus.Submitted} className={this.state.isMobileView ? "mobile-reject" : ""} content={this.localize("reject")} onClick={this.onRejectFromTimesheetClick} />
-                                <Button disabled={this.state.selectedDateTimesheetStatusForCalendar.status !== TimesheetStatus.Submitted} className={this.state.isMobileView ? "mobile-approve" : ""} primary content={this.localize("approve")} onClick={this.onApproveClick} />
-                            </>
-                        }
-                        {!this.state.isRejectClick && (this.state.activeTabIndex === RequestsTabIndex || !this.state.isViewTimesheet) &&
-                            <>
-                                <Button disabled={!(this.getSelectedTimesheetRequests().length > 0)} className={this.state.isMobileView ? "mobile-reject" : ""} content={this.localize("reject")} onClick={this.onRejectClick} />
-                                <Button disabled={!(this.getSelectedTimesheetRequests().length > 0)} className={this.state.isMobileView ? "mobile-approve" : ""} primary content={this.localize("approve")} onClick={this.onApproveClick} />
-                            </>
-                        }
-                        {this.state.isRejectClick && (this.state.activeTabIndex === RequestsTabIndex || this.state.activeTabIndex === TimesheetTabIndex) &&
-                            <Flex gap="gap.small">
-                                <Button content={this.localize("backButtonLabel")} onClick={this.onRejectClick} />
-                                <Button primary content={this.localize("sendButtonLabel")} onClick={this.onSendClick} />
-                            </Flex>
-                        }
-                    </Flex>
-                </Flex.Item>
-            </Flex>
+            <div className="footer">
+                <Flex space="between" vAlign="center">
+                    <Flex.Item push >
+                        <Flex gap="gap.small">
+                            {!this.state.isRejectClick && (this.state.activeTabIndex === RequestsTabIndex || !this.state.isViewTimesheet) &&
+                                <>
+                                    <Button disabled={!(this.getSelectedTimesheetRequests().length > 0)} className={this.state.isMobileView ? "mobile-reject" : ""} content={this.localize("reject")} onClick={this.onRejectClick} />
+                                    <Button disabled={!(this.getSelectedTimesheetRequests().length > 0)} className={this.state.isMobileView ? "mobile-approve" : ""} primary content={this.localize("approve")} onClick={this.onApproveClick} />
+                                </>
+                            }
+                            {this.state.isRejectClick && (this.state.activeTabIndex === RequestsTabIndex || !this.state.isViewTimesheet) &&
+                                <Flex gap="gap.small">
+                                    <Button primary content={this.localize("backButtonLabel")} onClick={this.onRejectClick} />
+                                    <Button primary content={this.localize("sendButtonLabel")} onClick={this.onSendClick} />
+                                </Flex>
+                            }
+                        </Flex>
+                    </Flex.Item>
+                </Flex>
+            </div>
         );
-    }
-
-    /**
-     * Format project titles to show in column.
-     * @param submittedRequest The requests of which project titles to format.
-     */
-    getProjectTitles = (submittedRequest: ISubmittedRequest) => {
-        var titles = "";
-        if (submittedRequest.projectTitles.length === 1) {
-            return `${submittedRequest.projectTitles[0]}.`;
-        }
-        else {
-            for (var i = 0; i < submittedRequest.projectTitles.length; i++) {
-                if (i === 0) {
-                    titles = `${submittedRequest.projectTitles[i]}`
-                }
-                else if (i === submittedRequest.projectTitles.length - 1) {
-                    titles = `${titles}, ${submittedRequest.projectTitles[i]}.`
-                }
-                else {
-                    titles = `${titles}, ${submittedRequest.projectTitles[i]}`
-                }
-            }
-            return titles;
-        }
     }
 
     /** 
@@ -729,7 +706,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
                     "key": index,
                     "items": [
                         {
-                            content: <Checkbox data-tid={`request-checkbox-${index}`} key={index} checked={submittedRequest.isSelected} onChange={() => this.onRequestCheckedChange(submittedRequest)} />,
+                            content: <Checkbox key={index} checked={submittedRequest.isSelected} onChange={() => this.onRequestCheckedChange(submittedRequest)} />,
                             design: this.tableCheckboxColumnDesign
                         },
                         {
@@ -756,7 +733,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
 
             return (
                 <div className={"request-table-container"}>
-                    <Table data-tid={`request-review-table`} header={timesheetRequestTableHeaderItems} rows={rows} />
+                    <Table header={timesheetRequestTableHeaderItems} rows={rows} />
                 </div>
             );
         }
@@ -776,7 +753,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
             if (!this.state.isMobileView) {
                 return (
                     <Flex column gap="gap.small">
-                        <Text content={moment(this.state.selectedDateTimesheetStatusForCalendar.date).format("MMMM DD, YYYY")} weight="semibold" />
+                        <Text content={moment(this.state.selectedDateTimesheetStatusForCalendar.date).format("dddd, Do MMM")} weight="semibold" />
                         <Flex vAlign="center" gap="gap.large">
                             <Flex column gap="gap.smaller">
                                 <Text size="small" content={`${this.localize("timesheetStatusLabel")}:`} />
@@ -789,7 +766,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
             else {
                 return (
                     <Flex column gap="gap.small">
-                        <Text className="mobile-title" content={moment(this.state.selectedDateTimesheetStatusForCalendar.date).format("MMMM DD, YYYY")} weight="semibold" />
+                        <Text className="mobile-title" content={moment(this.state.selectedDateTimesheetStatusForCalendar.date).format("dddd, Do MMM")} weight="semibold" />
                         <Flex vAlign="center">
                             <Text className={this.state.isMobileView ? "mobile-subtitle" : "desktop-subtitle"} content={`${this.localize("timesheetStatusLabel")}:`} />
                             <Flex.Item push>
@@ -853,56 +830,53 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
      */
     renderDesktopView = () => {
         return (
-            <div className="page-content">
-                <Flex vAlign="center" gap="gap.large" column>
-                    <Flex vAlign="center" >
-                        <Avatar size="larger" className="user-avatar" name={this.params.userName} />
-                        <Flex.Item>
-                            <Flex vAlign="center" column>
-                                <Text className="user-name" content={this.params.userName} weight="semibold" />
-                                <Text className="user-subtitle" content="" />
-                                <Text className="user-subtitle" content="" />
-                            </Flex>
-                        </Flex.Item>
-                    </Flex>
-                    {!this.state.isRejectClick &&
-                        <Menu
-                            underlined
-                            primary
-                            items={this.renderTabMenuItems()}
-                            defaultActiveIndex={RequestsTabIndex}
-                            activeIndex={this.state.activeTabIndex}
-                            onActiveIndexChange={this.onTabIndexChange}
-                            data-tid={`view-timesheet-menu`}
-                        />
-                    }
-                    {this.state.activeTabIndex === RequestsTabIndex && !this.state.isRejectClick && this.renderRequestsTable()}
-                    {this.state.isRejectClick && this.renderRejectReasonView()}
-                    {this.state.activeTabIndex === TimesheetTabIndex && !this.state.isRejectClick &&
-                        <Flex column>
-                            <Flex gap="gap.medium" vAlign="center">
-                                <Calendar
-                                    isDisabled={true}
-                                    isDuplicatingEfforts={false}
-                                    onCalendarEditModeChange={() => void 0}
-                                    onEffortsDuplicated={() => void 0}
-                                    onWeekChange={this.onCalendarWeekChange}
-                                    isMobile={this.state.isMobileView}
-                                    isManagerView={true}
-                                    timesheetData={this.state.userTimesheet}
-                                    onCalendarActiveDateChange={this.onCalendarActiveDateChange}
-                                    isLoading={this.state.isLoading}
-                                />
-                                <Flex.Item>
-                                    {this.renderCalendarDateInfo()}
-                                </Flex.Item>
-                            </Flex>
-                            {this.renderProjectDetails()}
+            <Flex vAlign="center" gap="gap.large" column>
+                <Flex vAlign="center" >
+                    <Avatar size="larger" className="user-avatar" name={this.params.userName} />
+                    <Flex.Item>
+                        <Flex vAlign="center" column>
+                            <Text className="user-name" content={this.params.userName} weight="semibold" />
+                            <Text className="user-subtitle" content="" />
+                            <Text className="user-subtitle" content="" />
                         </Flex>
-                    }
-                    {this.renderFooter()}
+                    </Flex.Item>
                 </Flex>
-            </div>
+                {!this.state.isRejectClick &&
+                    <Menu
+                        underlined
+                        primary
+                        items={this.renderTabMenuItems()}
+                        defaultActiveIndex={RequestsTabIndex}
+                        activeIndex={this.state.activeTabIndex}
+                        onActiveIndexChange={this.onTabIndexChange}
+                    />
+                }
+                {this.state.activeTabIndex === RequestsTabIndex && !this.state.isRejectClick && this.renderRequestsTable()}
+                {this.state.isRejectClick && this.renderRejectReasonView()}
+                {this.state.activeTabIndex === TimesheetTabIndex && !this.state.isRejectClick &&
+                    <Flex column>
+                        <Flex gap="gap.medium" vAlign="center">
+                            <Calendar
+                                isDisabled={true}
+                                isDuplicatingEfforts={false}
+                                onCalendarEditModeChange={() => void 0}
+                                onEffortsDuplicated={() => void 0}
+                                onWeekChange={this.onCalendarWeekChange}
+                                isMobile={this.state.isMobileView}
+                                isManagerView={true}
+                                timesheetData={this.state.userTimesheet}
+                                onCalendarActiveDateChange={this.onCalendarActiveDateChange}
+                                isLoading={this.state.isLoading}
+                            />
+                            <Flex.Item>
+                                {this.renderCalendarDateInfo()}
+                            </Flex.Item>
+                        </Flex>
+                        {this.renderProjectDetails()}
+                    </Flex>
+                }
+                {this.renderFooter()}
+            </Flex>
         );
     }
 
@@ -913,7 +887,7 @@ class RequestReview extends React.Component<IRequestReviewProps, IRequestReviewS
         return (
             <Provider>
                 <Flex>
-                    <div className="request-review-container task-module-container">
+                    <div className="request-review-container">
                         {this.state.isMobileView ? this.renderMobileView() : this.renderDesktopView()}
                     </div>
                 </Flex>

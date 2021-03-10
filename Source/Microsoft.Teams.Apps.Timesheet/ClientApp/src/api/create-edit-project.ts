@@ -5,7 +5,7 @@
 
 import axios from "./axios-decorator";
 import { AxiosRequestConfig } from "axios";
-import IProject from "../models/project";
+import IProject from "../models/Project";
 
 /**
  * Save project details

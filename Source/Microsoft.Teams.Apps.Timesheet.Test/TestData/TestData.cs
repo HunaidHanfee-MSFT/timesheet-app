@@ -44,6 +44,31 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.TestData
         };
 
         /// <summary>
+        /// Saved timesheet test list.
+        /// 10 is the frozen date of timesheet.
+        /// </summary>
+        public static readonly List<TimesheetEntity> FrozenDateTimesheets = new List<TimesheetEntity>
+        {
+            new TimesheetEntity
+            {
+                Id = Guid.NewGuid(),
+                TaskId = Guid.NewGuid(),
+                UserId = Guid.Parse("3fd7af65-67df-43cb-baa0-30917e133d94"),
+                Status = (int)TimesheetStatus.Saved,
+                Hours = 5,
+                TimesheetDate = new DateTime(DateTime.Now.Year - 1, DateTime.Now.Month, 10),
+                Task = new TaskEntity
+                {
+                    ProjectId = Guid.NewGuid(),
+                    Project = new Project
+                    {
+                        Title = "Project",
+                    },
+                },
+            },
+        };
+
+        /// <summary>
         /// Request approval DTO test list.
         /// </summary>
         public static readonly List<RequestApprovalDTO> RequestApprovalDTOs = new List<RequestApprovalDTO>
@@ -198,11 +223,9 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.TestData
         {
             Id = Guid.Parse("1eec371f-edbe-4ad1-be1d-d4cd3515541e"),
             Title = "Project 1",
-            BillableUnderutilizedHours = 2,
-            BillableUtilizedHours = 10,
-            NonBillableUtilizedHours = 10,
-            NonBillableUnderutilizedHours = 2,
-            TotalHours = 24,
+            NotUtilizedHours = 50,
+            BillableHours = 50,
+            NonBillableHours = 10,
         };
 
         /// <summary>
@@ -245,7 +268,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.TestData
                 UserId = Guid.Parse("3fd7af65-67df-43cb-baa0-30917e133d94"),
                 Status = (int)TimesheetStatus.Approved,
                 Hours = 5,
-                TimesheetDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 4),
+                TimesheetDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 5),
                 Task = new TaskEntity
                 {
                     ProjectId = Guid.Parse("1eec371f-edbe-4ad1-be1d-d4cd3515541e"),
@@ -262,7 +285,7 @@ namespace Microsoft.Teams.Apps.Timesheet.Tests.TestData
                 UserId = Guid.Parse("3fd7af65-67df-43cb-baa0-30917e133d94"),
                 Status = (int)TimesheetStatus.Approved,
                 Hours = 5,
-                TimesheetDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 4),
+                TimesheetDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 5),
                 Task = new TaskEntity
                 {
                     ProjectId = Guid.Parse("1eec371f-edbe-4ad1-be1d-d4cd3515541e"),

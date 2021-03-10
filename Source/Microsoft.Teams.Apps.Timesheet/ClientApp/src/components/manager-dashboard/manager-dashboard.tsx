@@ -4,26 +4,25 @@
 // </copyright>
 
 import * as React from "react";
-import { Flex, Provider, Input, Checkbox, Text, Table, Divider, Button, Avatar, Dialog, List, Loader, TextArea } from '@fluentui/react-northstar';
-import { SearchIcon, AcceptIcon, QuestionCircleIcon, CloseIcon, AddIcon, ChevronEndIcon, ChevronStartIcon, EyeSlashIcon } from '@fluentui/react-icons-northstar';
-import Constants, { NavigationCommand } from "../../constants/constants";
+import { Flex, Provider, Input, Checkbox, Text, Table, Divider, Button, Avatar, Dialog, List, Loader } from '@fluentui/react-northstar';
+import { SearchIcon, AcceptIcon, QuestionCircleIcon, CloseIcon, AddIcon, ChevronEndIcon, ChevronStartIcon } from '@fluentui/react-icons-northstar';
+import Constants, { NavigationCommand, ResponseStatus } from "../../constants/constants";
 import { TimesheetStatus } from "../../models/timesheet-status";
 import { IDashboardRequest } from "../../models/dashboard-request";
 import { WithTranslation, withTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import withContext, { IWithContext } from "../../providers/context-provider";
 import { cloneDeep } from "lodash";
-import { getDashboardRequestsAsync, approveTimesheetsAsync, rejectTimesheetsAsync } from "../../api/timesheet";
+import { getDashboardRequestsAsync } from "../../api/timesheet";
+import { approveTimesheetsAsync, rejectTimesheetsAsync, approveTimesheetsByUserIdsAsync, rejectTimesheetsByUserIdsAsync } from "../../api/timesheet";
 import { withRouter, RouteComponentProps } from "react-router-dom";
 import { IDashboardProject } from "../../models/dashboard/dashboard-project";
-import DashboardProjectsWrapper from "../dashboard-projects-wrapper/dashboard-projects-wrapper";
+import DashboardProject from "../dashboard-projects-wrapper/dashboard-projects-wrapper";
 import { getDashboardProjectsAsync } from "../../api/project";
 import moment from "moment";
 import { Guid } from "guid-typescript";
 import { StatusCodes } from "http-status-codes";
-import { getReportees } from "../../api/users";
 import { IRequestApproval } from "../../models/request-approval";
-import IUserSearchResult from "../../models/user-search-result";
 
 import "./manager-dashboard.scss";
 
@@ -39,15 +38,11 @@ interface IManagerDashboardState {
     isSelectMultiple: boolean;
     searchText: string;
     dashboardProjects: IDashboardProject[];
-    searchDashboardProjects: IDashboardProject[],
     visibleProjectDetails: IDashboardProject[];
     searchProjectsMobile: IDashboardProject[];
     pageNumber: number;
     isStart: boolean;
     isEnd: boolean;
-    isLoggedInUserManager: boolean;
-    managersComment: string;
-    isReasonInputValid: boolean;
 }
 
 interface IManagerDashboardProps extends WithTranslation, IWithContext, RouteComponentProps {
@@ -80,19 +75,15 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
             isAllDashboardRequestsSelected: false,
             isActionEnabled: false,
             isLoading: false,
-            isMobileView: window.outerWidth <= Constants.maxWidthForMobileView,
+            isMobileView: false,
             isSelectMultiple: false,
             searchText: "",
             dashboardProjects: [],
-            searchDashboardProjects: [],
             visibleProjectDetails: [],
             searchProjectsMobile: [],
             pageNumber: 0,
             isStart: false,
             isEnd: false,
-            isLoggedInUserManager: false,
-            managersComment: "",
-            isReasonInputValid: true,
         };
     }
 
@@ -108,11 +99,8 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
      */
     componentDidMount() {
         window.addEventListener("resize", this.onScreenSizeChange);
-
-        this.getReporteesAsync().finally(() => {
-            this.getDashboardTimesheetsAsync();
-            this.getDashboardProjectsAsync();
-        });
+        this.getDashboardTimesheetsAsync();
+        this.getDashboardProjectsAsync();
     }
 
     /**
@@ -124,20 +112,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
         if (response.status === StatusCodes.OK && response.data) {
             this.setState({ dashboardRequests: response.data, isLoading: false });
         } else {
-            this.setState({ dashboardRequests: [], isLoading: false });
-        }
-    }
-
-    // Gets reportees of logged-in user.
-    getReporteesAsync = async () => {
-        this.setState({ isLoading: true });
-        let response = await getReportees("", this.handleTokenAccessFailure);
-        if (response && response.status === StatusCodes.OK && response.data) {
-            let reportees: IUserSearchResult[] = response.data;
-            this.setState({ isLoading: false, isLoggedInUserManager: reportees.length > 0 });
-        }
-        else {
-            this.setState({ isLoading: false, isLoggedInUserManager: false });
+            this.setState({ isLoading: false });
         }
     }
 
@@ -145,7 +120,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
      * Called when screen size gets updated; which sets the state to indicate whether mobile view enabled. 
      */
     onScreenSizeChange = () => {
-        this.setState({ isMobileView: window.outerWidth <= Constants.maxWidthForMobileView });
+        this.setState({ isMobileView: window.innerWidth <= Constants.maxWidthForMobileView });
     }
 
     /**
@@ -186,14 +161,14 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
      * @param selectedRequests The array of selected request.
      * @param status The status to be update.
      */
-    requestUpdateAsync = async (selectedRequests: IDashboardRequest[], status: TimesheetStatus) => {
+    requestUpdateAsync = async (selectedRequests: Array<IDashboardRequest>, status: TimesheetStatus) => {
         this.setState({ isLoading: true });
         let requestApproval: IRequestApproval[] = [];
 
         selectedRequests.map((timesheet: IDashboardRequest) => {
             timesheet.submittedTimesheetIds.map((timesheetId: Guid) => {
                 requestApproval.push({
-                    managerComments: status === TimesheetStatus.Approved ? "" : this.state.managersComment.trim(),
+                    managerComments: "",
                     status: status,
                     userId: timesheet.userId,
                     timesheetDate: [],
@@ -212,10 +187,10 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
         }
 
         if (response.status === StatusCodes.NO_CONTENT) {
-            this.setState({ isLoading: false, managersComment: "" });
+            this.setState({ isLoading: false });
             return true;
         } else {
-            this.setState({ isLoading: false, managersComment: "" });
+            this.setState({ isLoading: false });
             return false;
         }
     }
@@ -267,32 +242,13 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
     /** 
      * Searches requests based on search text and display search results. 
      */
-    searchTimesheet = (search: string) => {
-        let dashboardRequests: IDashboardRequest[] = cloneDeep(this.state.dashboardRequests) ?? [];
+    searchTimesheet = () => {
+        let dashboardRequests: Array<IDashboardRequest> = cloneDeep(this.state.dashboardRequests) ?? [];
         let searchedTimesheets = dashboardRequests.filter((dashboardRequest: IDashboardRequest) => {
-            return dashboardRequest.userName.toLowerCase().indexOf(search.toLowerCase()) > -1;
+            return dashboardRequest.userName.toLowerCase().indexOf(this.state.searchText.toLowerCase()) > -1;
         });
 
         this.setState({ searchDashboardRequests: searchedTimesheets });
-        this.searchProject(search);
-    }
-
-    /**
-     * Searches projects based on search text and display search results
-     * @param seachText The seach text entered in seach box
-     */
-    searchProject = (search: string) => {
-        let projects: IDashboardProject[] = cloneDeep(this.state.dashboardProjects) ?? [];
-        let searchedProject = projects.filter((project: IDashboardProject) => {
-            return project.title.toLowerCase().indexOf(search.toLowerCase()) > -1;
-        });
-
-        if (this.state.isMobileView) {
-            this.setState({ searchProjectsMobile: searchedProject });
-        }
-        else {
-            this.setState({ searchDashboardProjects: searchedProject }, () => this.pageNavigation(NavigationCommand.Default));
-        }
     }
 
     /**
@@ -300,10 +256,17 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
      * @param event The input event object.
      */
     onSearchTextChanged = (event: any) => {
+        let dashboardRequests: Array<IDashboardRequest> = cloneDeep(this.state.dashboardRequests) ?? [];
         this.setState({ searchText: event.target.value });
-        this.searchTimesheet(event.target.value);
 
-        if (cloneDeep(this.state.dashboardRequests).length === 0 && cloneDeep(this.state.dashboardProjects).length === 0) {
+        if (dashboardRequests.length > 0 && this.state.searchText && this.state.searchText.trim() !== "") {
+            this.searchTimesheet();
+        }
+        else {
+            this.setState({ dashboardRequests });
+        }
+
+        if (dashboardRequests.length === 0) {
             this.setState({ searchText: "" });
         }
     }
@@ -371,28 +334,12 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
      */
     onRequestClick = (dashboardRequest: IDashboardRequest) => {
         this.props.microsoftTeams.tasks.startTask({
-            title: this.state.isMobileView ? this.localize("timesheetUpdatesMobileTaskModuleTitle") : this.localize("updatesToReviewLabel"),
+            title: this.localize("timesheetRequestLabel"),
             height: Constants.taskModuleHeight,
             width: Constants.taskModuleWidth,
             url: `${window.location.origin}/request-review/${dashboardRequest.userId.toString()}/${dashboardRequest.userName}/${this.state.isMobileView}`
         }, (error: any, result: any) => {
-            this.getDashboardTimesheetsAsync();
-            this.getDashboardProjectsAsync();
-        });
-    }
-
-    /**
-     * Invoked when user click on add project button.
-     */
-    openAddNewProjectTaskModule = () => {
-        this.props.microsoftTeams.tasks.startTask({
-            title: this.localize("addNewProjectLabel"),
-            height: 746,
-            width: 600,
-            url: `${window.location.origin}/add-project`
-        }, (error: any, result: any) => {
-            this.getDashboardTimesheetsAsync();
-            this.getDashboardProjectsAsync();
+            //TODO pending 
         });
     }
 
@@ -404,7 +351,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
             <Flex className="manage-timesheet-request-content" gap="gap.small">
                 <Flex.Item>
                     <div className="error-container">
-                        <QuestionCircleIcon outline />
+                        <QuestionCircleIcon outline color="green" />
                     </div>
                 </Flex.Item>
                 <Flex.Item grow>
@@ -412,8 +359,9 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                         <div>
                             <Text weight="bold" content={this.localize("timesheetRequestNotAvailableHeaderDescription")} /><br />
                             <Text content={
-                                this.state.searchText !== "" &&
-                                this.localize("timesheetRequestNotFoundForSearchedTextDescription", { searchedText: this.state.searchText })}
+                                this.state.searchText !== "" ?
+                                    this.localize("timesheetRequestNotFoundForSearchedTextDescription", { searchedText: this.state.searchText }) :
+                                    this.localize("timesheetRequestNotAvailableHeaderDescription")}
                             />
                         </div>
                     </Flex>
@@ -466,28 +414,6 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
     }
 
     /**
-     * Get validation error when user enter incorrect reason.
-     */
-    getReasonError = () => {
-        if (this.state.managersComment.length > Constants.reasonDescriptionMaxLength) {
-            return (<Text content={this.localize("reasonMaxCharError")} error />);
-        }
-
-        return (<></>);
-    }
-
-    /** 
-     * Event handler when user enter text in reject reason text area. 
-     */
-    handleTextAreaChange = (event: any) => {
-        let reasonDescription = event.target.value;
-        this.setState({
-            managersComment: reasonDescription,
-            isReasonInputValid: true,
-        });
-    }
-
-    /**
      * Render member list. 
      */
     renderMemberList = () => {
@@ -534,7 +460,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
     renderMobileView = () => {
         return (<div className="dashboard-mobile-view">
             <Flex vAlign="center" className="list-header" padding="padding.medium">
-                <Text content={this.localize("updatesToReviewLabel")} size="large" weight="semibold" />
+                <Text content={this.localize("request")} size="large" weight="semibold" />
                 <Flex.Item push>
                     <div>
                         {!this.state.isSelectMultiple && this.state.dashboardRequests.length > 0 &&
@@ -566,11 +492,11 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                 key: "header",
                 items: [
                     {
-                        content: <AcceptIcon data-tid={`select-all-requests`} className="accept-all-icon" outline key="timesheetRequestTableHeader" onClick={this.onSelectAllRequestsCheckedChange} />,
+                        content: <AcceptIcon className="accept-all-icon" outline key="timesheetRequestTableHeader" onClick={this.onSelectAllRequestsCheckedChange} />,
                         design: this.tableCheckboxColumnDesign
                     },
                     {
-                        content: <Text weight="semibold" className="table-header" content={this.localize("memberLabel")} />,
+                        content: <Text weight="semibold" className="table-header" content={this.localize("employee")} />,
                         design: this.tableColumnDesign
                     },
                     {
@@ -593,7 +519,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                     "key": `dashboard-request-${index}`,
                     "items": [
                         {
-                            content: <Checkbox key={index} data-tid={`member-checkbox-${index}`} checked={dashboardRequest.isSelected} onChange={() => this.onRequestCheckedChange(dashboardRequest)} />,
+                            content: <Checkbox key={index} checked={dashboardRequest.isSelected} onChange={() => this.onRequestCheckedChange(dashboardRequest)} />,
                             design: this.tableCheckboxColumnDesign
                         },
                         {
@@ -626,7 +552,6 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
 
             return (
                 <Table className="manage-timesheet-content  manage-timesheet-request-content-background"
-                    data-tid="dashboard-table"
                     header={dashboardRequestTableHeaderItems}
                     rows={rows}
                 />
@@ -651,29 +576,12 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                             <Flex gap="gap.small">
                                 <Dialog
                                     className="request-review-dialog"
-                                    design={{ width: "30rem !important", height: "30rem !important", padding: "0rem" }}
+                                    design={{ width: "27rem !important", height: "9.8rem !important", padding: "0rem" }}
                                     header={
                                         <Flex className="dialog-header" vAlign="center" hAlign="center">
-                                            <Text content={this.localize("rejectRequestsConfirmation", { requestCount: this.getSelectedRequestsCount() })} weight="semibold" />
+                                            <Text content={`${this.localize("reject")} ${this.getSelectedRequestsCount()} requests?`} weight="semibold" />
                                         </Flex>}
                                     closeOnOutsideClick={true}
-                                    content={
-                                        <Flex className="mobile-dialog-margin" column>
-                                            <Flex>
-                                                <Text content={`${this.localize("reason")}:`} weight="semibold" />
-                                                <Flex.Item push>
-                                                    {this.getReasonError()}
-                                                </Flex.Item>
-                                            </Flex>
-                                            <TextArea
-                                                fluid
-                                                className="reason-input"
-                                                placeholder={this.localize("reasonTextAreaPlaceholder")}
-                                                value={this.state.managersComment}
-                                                onChange={this.handleTextAreaChange}
-                                                maxLength={Constants.reasonDescriptionMaxLength}
-                                            />
-                                        </Flex>}
                                     trigger={
                                         <Button disabled={!this.state.isActionEnabled} className={!this.state.isActionEnabled ? "list-timesheet-menu-button-disabled" : "list-timesheet-menu-button-reject"} content={this.localize("reject")}
                                             onClick={() => this.onRejectDialogTriggerOrClose()}
@@ -681,8 +589,8 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                                     }
                                     footer={
                                         <Flex>
-                                            <Button className="dialog-button-left" content={<Text className="dialog-button-text" content={this.localize("cancelButtonLabel")} />} onClick={() => this.onRejectDialogTriggerOrClose()} />
-                                            <Button className="dialog-button-right" content={<Text className="dialog-button-text" content={this.localize("reject")} />} onClick={() => this.onRejectClick()} />
+                                            <Button className="dialog-button-left" content={<Text className="dialog-button-text" content="No" />} onClick={() => this.onRejectDialogTriggerOrClose()} />
+                                            <Button className="dialog-button-right" content={<Text className="dialog-button-text" content="Yes" />} onClick={() => this.onRejectClick()} />
                                         </Flex>}
                                     open={this.state.isRejectDialogOpen}
                                 />
@@ -691,7 +599,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                                     design={{ width: "27rem !important", height: "9.8rem !important", padding: "0rem" }}
                                     header={
                                         <Flex className="dialog-header" vAlign="center" hAlign="center">
-                                            <Text content={this.localize("approveRequestsConfirmation", { requestCount: this.getSelectedRequestsCount() })} weight="semibold" />
+                                            <Text content={`${this.localize("approve")} ${this.getSelectedRequestsCount()} requests?`} weight="semibold" />
                                         </Flex>}
                                     closeOnOutsideClick={true}
                                     trigger={
@@ -701,8 +609,8 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                                     }
                                     footer={
                                         <Flex>
-                                            <Button className="dialog-button-left" content={<Text className="dialog-button-text" content={this.localize("cancelButtonLabel")} />} onClick={() => this.onApproveDialogTriggerOrClose()} />
-                                            <Button className="dialog-button-right" content={<Text className="dialog-button-text" content={this.localize("approve")} />} onClick={() => this.onApproveClick()} />
+                                            <Button className="dialog-button-left" content={<Text className="dialog-button-text" content="No" />} onClick={() => this.onApproveDialogTriggerOrClose()} />
+                                            <Button className="dialog-button-right" content={<Text className="dialog-button-text" content="Yes" />} onClick={() => this.onApproveClick()} />
                                         </Flex>}
                                     open={this.state.isApproveDialogOpen}
                                 />
@@ -724,44 +632,24 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                     <Flex vAlign="center">
                         <Text className="selected-text" content={`${this.getSelectedRequestsCount()} ${this.localize("selected")}`} />
                         <Dialog
-                            className="web-reject-dialog"
-                            design={{ width: "40rem !important", height: "30rem !important" }}
-                            header={<Text content={this.localize("rejectRequestsConfirmation", { requestCount: this.getSelectedRequestsCount() })} weight="semibold" />}
-                            cancelButton={this.localize("cancelButtonLabel")}
-                            content={
-                                <Flex column>
-                                    <Flex>
-                                        <Text content={`${this.localize("reason")}:`} weight="semibold" />
-                                        <Flex.Item push>
-                                            {this.getReasonError()}
-                                        </Flex.Item>
-                                    </Flex>
-                                    <TextArea
-                                        fluid
-                                        className="reason-input"
-                                        placeholder={this.localize("reasonTextAreaPlaceholder")}
-                                        value={this.state.managersComment}
-                                        onChange={this.handleTextAreaChange}
-                                        maxLength={Constants.reasonDescriptionMaxLength}
-                                    />
-                                </Flex>}
-                            confirmButton={<Button primary disabled={!this.state.isReasonInputValid} content={this.localize("rejectRequestsConfirmationRejectButtonText")} data-tid={`dialog-reject-button`} />}
+                            design={{ width: "40rem !important", height: "14.9rem" }}
+                            header={<Text content={`${this.localize("reject")} ${this.getSelectedRequestsCount()} requests?`} weight="semibold" />}
+                            cancelButton={this.localize("confirmationNo")}
+                            confirmButton={this.localize("confirmationYes")}
                             onConfirm={() => this.onRejectClick()}
                             trigger={
-                                <Button text disabled={!this.state.isActionEnabled} icon={<CloseIcon className="manager-dashboard-reject-icon" />} content={this.localize("reject")} data-tid={`reject-button`} />
+                                <Button text disabled={!this.state.isActionEnabled} icon={<CloseIcon />} content={this.localize("reject")} />
                             }
-                            data-tid={`reject-dialog`}
                         />
                         <Dialog
                             design={{ width: "40rem !important", height: "14.9rem" }}
-                            header={<Text content={this.localize("approveRequestsConfirmation", { requestCount: this.getSelectedRequestsCount() })} weight="semibold" />}
-                            cancelButton={this.localize("cancelButtonLabel")}
-                            confirmButton={<Button primary content={this.localize("approveRequestsConfirmationApproveButtonText")} data-tid={`dialog-approve-button`} />}
+                            header={<Text content={`${this.localize("approve")} ${this.getSelectedRequestsCount()} requests?`} weight="semibold" />}
+                            cancelButton={this.localize("confirmationNo")}
+                            confirmButton={this.localize("confirmationYes")}
                             onConfirm={() => this.onApproveClick()}
                             trigger={
-                                <Button text disabled={!this.state.isActionEnabled} icon={<AcceptIcon className="manager-dashboard-approve-icon" />} content={this.localize("approve")} data-tid={`approve-button`} />
+                                <Button text disabled={!this.state.isActionEnabled} icon={<AcceptIcon />} content={this.localize("approve")} />
                             }
-                            data-tid={`approve-dialog`}
                         />
                     </Flex>
                 </Flex.Item>
@@ -777,7 +665,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
             <Flex column>
                 <div className="table-heading">
                     <Flex>
-                        <Text content={this.localize("updatesToReviewLabel")} size="large" weight="semibold" />
+                        <Text content={this.localize("request")} size="large" weight="semibold" />
                         {this.renderAction()}
                     </Flex>
                 </div>
@@ -810,7 +698,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
         let lastDay = this.getUtcDate(endDate);
 
         let response = await getDashboardProjectsAsync(firstDay, lastDay, this.handleTokenAccessFailure);
-        if (response && response.status === StatusCodes.OK && response.data) {
+        if (response && response.status === ResponseStatus.OK && response.data) {
             this.setState({
                 dashboardProjects: response.data,
                 isLoading: false
@@ -835,49 +723,58 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
      * @param navigationCommand Navigation command (forward/backward).
      */
     pageNavigation = (navigationCommand: NavigationCommand) => {
-        let pageNumber = 0;
-        if (navigationCommand == NavigationCommand.Forward) {
+        // Default page number.
+        let pageNumber = 1;
+
+        // When user click forward button on projects bar increment number by one.
+        if (navigationCommand === NavigationCommand.Forward) {
             pageNumber = this.state.pageNumber + 1;
         }
-        else if (navigationCommand == NavigationCommand.Backward) {
+        // When user click backward button on projects bar decrement number by one.
+        else if (navigationCommand === NavigationCommand.Backward && pageNumber > 1) {
             pageNumber = this.state.pageNumber - 1;
         }
-        else {
-            pageNumber = 1
-        }
 
-        let visibleProjects: IDashboardProject[] = [];
-        let projectDetails: IDashboardProject[] = []
-        if (this.state.isMobileView) {
-            projectDetails = this.state.searchText && this.state.searchText.length > 0 ? this.state.searchProjectsMobile : this.state.dashboardProjects;
-        }
-        else {
-            projectDetails = this.state.searchText && this.state.searchText.length > 0 ? this.state.searchDashboardProjects : this.state.dashboardProjects;
-        }
+        let visibleProjects: Array<IDashboardProject> = [];
+        let projectDetails = this.state.searchText ? this.state.searchProjectsMobile : this.state.dashboardProjects;
 
+        // Set upper limit of the project cards to show.
         let upperLimit = pageNumber * 3;
+
+        // Set lower limit of the project cards to show.
         let lowerLimit = upperLimit - 3;
+
         if (upperLimit < projectDetails.length) {
-            lowerLimit = upperLimit - 3;
+            // Get projects from lower limit to upper limit.
             for (let i = lowerLimit; i < upperLimit; i++) {
                 visibleProjects.push(projectDetails[i]);
             }
-            this.setState({ isStart: false, isEnd: false });
+
+            // If page number is 1 then backward button gets disabled using isStart state.
+            if (pageNumber === 1) {
+                this.setState({ pageNumber: pageNumber, visibleProjectDetails: visibleProjects, isStart: true, isEnd: false });
+            }
+            // Both button is enabled.
+            else {
+                this.setState({ pageNumber: pageNumber, visibleProjectDetails: visibleProjects, isStart: false, isEnd: false });
+            }
         }
         else {
+            // Get projects from lower limit to projects length.
             for (let i = lowerLimit; i < projectDetails.length; i++) {
                 visibleProjects.push(projectDetails[i]);
             }
-            this.setState({ isEnd: true });
-        }
 
-        if (pageNumber === 1) {
-            this.setState({ isStart: true });
+            // If page number is 1 and upper limit is greater than project length 
+            // then forward and backward both button gets disabled using isStart and isEnd state.
+            if (pageNumber === 1) {
+                this.setState({ pageNumber: pageNumber, visibleProjectDetails: visibleProjects, isStart: true, isEnd: true });
+            }
+            // Only backward button is enabled.
+            else {
+                this.setState({ pageNumber: pageNumber, visibleProjectDetails: visibleProjects, isStart: false, isEnd: true });
+            }
         }
-        else {
-            this.setState({ isStart: false });
-        }
-        this.setState({ pageNumber: pageNumber, visibleProjectDetails: visibleProjects });
     }
 
     /**
@@ -890,9 +787,6 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
             height: 746,
             width: 601,
             url: `${window.location.origin}/manage-project/${projectId}/${this.state.isMobileView}`
-        }, (error: any, result: any) => {
-            this.getDashboardTimesheetsAsync();
-            this.getDashboardProjectsAsync();
         });
     }
 
@@ -923,15 +817,6 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
             return <Loader />;
         }
 
-        if (!this.state.isLoggedInUserManager) {
-            return (
-                <Flex column hAlign="center" vAlign="center" design={{ height: "100vh" }}>
-                    <EyeSlashIcon size="largest" />
-                    <Text content={this.localize("managerDashboardNotAccessibleMessage")} size="larger" />
-                </Flex>
-            );
-        }
-
         return (
             <Provider>
                 <Flex>
@@ -944,7 +829,6 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                                     placeholder={this.localize("searchForRequestPlaceholder")}
                                     input={{ design: { minWidth: "30rem", maxWidth: "30rem" } }}
                                     onChange={this.onSearchTextChanged}
-                                    data-tid={`search-input`}
                                 />
                             </Flex.Item>
                         </Flex>
@@ -952,7 +836,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                             <Text className="project-header" weight="semibold" content={this.localize("projectHeader")} />
                             <Flex.Item push>
                                 <div>
-                                    <Button text icon={<AddIcon className="add-project-icon" />} content={this.localize("addProject")} onClick={this.openAddNewProjectTaskModule} />
+                                    <Button text icon={<AddIcon className="add-project-icon" />} content={this.localize("addProject")} />
                                     {!this.state.isMobileView &&
                                         <>
                                             <Button text icon={<ChevronStartIcon />} disabled={this.state.isStart} onClick={() => this.pageNavigation(NavigationCommand.Backward)} />
@@ -963,7 +847,7 @@ class ManagerDashboard extends React.Component<IManagerDashboardProps, IManagerD
                             </Flex.Item>
                         </Flex>
                         <div className={this.state.isMobileView ? "dashboard-projects-mobile-container" : ""}>
-                            <DashboardProjectsWrapper searchText={this.state.searchText} projects={this.getVisibleProjects()} onProjectCardClick={this.onProjectCardClick} isMobileView={this.state.isMobileView} />
+                            <DashboardProject projects={this.getVisibleProjects()} onProjectCardClick={this.onProjectCardClick} isMobileView={this.state.isMobileView} />
                         </div>
                         <Divider />
                         {this.state.isMobileView ? this.renderMobileView() : this.renderDesktopView()}

@@ -4,7 +4,7 @@
 // </copyright>
 
 import * as React from "react";
-import DashboardProjectsWrapper from "../dashboard-projects-wrapper";
+import DashboardProjectWrapper from "../dashboard-projects-wrapper";
 import { Provider } from "@fluentui/react-northstar";
 import { render, unmountComponentAtNode } from "react-dom";
 import { act } from "react-dom/test-utils";
@@ -26,9 +26,18 @@ jest.mock("react-i18next", () => ({
         return Component;
     },
 }));
+jest.mock("@microsoft/teams-js", () => ({
+    initialize: () => {
+        return true;
+    },
+    getContext: (callback: any) =>
+        callback(
+            Promise.resolve({ teamId: "ewe", entityId: "sdsd", locale: "en-US" })
+        ),
+}));
 
 let container: any = null;
-let projects: IDashboardProject[] = [
+let projects: Array<IDashboardProject> = [
     { id: Guid.create(), title: "Project 1", totalHours: 22, utilizedHours: 10 },
     { id: Guid.create(), title: "Project 2", totalHours: 100, utilizedHours: 0 },
 ];
@@ -46,12 +55,12 @@ afterEach(() => {
     container = null;
 });
 
-describe("DashboardProjectsWrapper", () => {
+describe("DashboardProjectWrapper", () => {
     it("renders snapshots", () => {
         act(() => {
             render(
                 <Provider>
-                    <DashboardProjectsWrapper isMobileView={false} projects={projects} onProjectCardClick={() => { }} searchText="" />
+                    <DashboardProjectWrapper isMobileView={false} projects={projects} onProjectCardClick={() => { }} />
                 </Provider>,
                 container
             );

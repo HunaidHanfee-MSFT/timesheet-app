@@ -9,7 +9,7 @@ import { Button, Flex, Input, Text, Form } from '@fluentui/react-northstar';
 import { WithTranslation, withTranslation } from "react-i18next";
 import DatePickerWrapper from "../common/date-picker/date-picker";
 import Constants from "../../constants/constants";
-import IProject from "../../models/project";
+import IProject from "../../models/Project";
 import { cloneDeep } from "lodash";
 import moment from "moment";
 
@@ -89,7 +89,7 @@ class Step1 extends React.Component<IStep1Props, IStep1State> {
         if (!this.state.isTitleValid && this.state.project.title.length === 0) {
             errorMessage = this.localize("errorRequired");
         }
-        else if (!this.state.isTitleValid && this.state.project.title.length > Constants.projectTitleMaxLength) {
+        else if (!this.state.isTitleValid && this.state.project.title.length > Constants.ProjectTitleMaxLength) {
             errorMessage = this.localize("errorInvalidTitleLength");
         }
 
@@ -189,7 +189,7 @@ class Step1 extends React.Component<IStep1Props, IStep1State> {
         };
 
         // Check if title is of valid length.
-        if (this.state.project.title.length === 0 || this.state.project.title.length > Constants.projectTitleMaxLength) {
+        if (this.state.project.title.length === 0 || this.state.project.title.length > Constants.ProjectTitleMaxLength) {
             validationStatus.isTitleValid = false;
         }
 
@@ -251,13 +251,13 @@ class Step1 extends React.Component<IStep1Props, IStep1State> {
         return (
             <Flex>
                 <div className="page-content">
-                    <Form styles={{ width: "100%", justifyContent: "normal" }}>
+                    <Form styles={{ width: "100%" }}>
                         <Form.Field
                             label={this.localize("step1ProjectTitleLabel")}
                             name="projectName"
                             id="project-name"
                             required
-                            control={<Input maxLength={Constants.projectTitleMaxLength} fluid placeholder={this.localize("step1ProjectTitleInputPlaceholder")} value={this.state.project.title} onChange={this.onTitleChange} />}
+                            control={<Input maxLength={Constants.ProjectTitleMaxLength} fluid placeholder={this.localize("step1ProjectTitleInputPlaceholder")} value={this.state.project.title} onChange={this.onTitleChange} />}
                             errorMessage={this.getTitleValidationError()}
                         />
                         <Form.Field
@@ -271,18 +271,18 @@ class Step1 extends React.Component<IStep1Props, IStep1State> {
                         <Flex gap="gap.smaller">
                             <Flex.Item size="size.half">
                                 <Form.Field
-                                    label={this.localize("step1BillableHoursLabel")}
+                                    label={this.localize("step1MonthlyBillableHoursLabel")}
                                     name="billableHours"
                                     id="billable-hours"
-                                    control={<Input type="number" min={0} fluid placeholder={this.localize("step1BillableHoursPlaceholder")} value={this.state.project.billableHours} onChange={this.onBillableHoursChange} />}
+                                    control={<Input type="number" min={0} fluid placeholder={this.localize("step1MonthlyBillableHoursLabel")} value={this.state.project.billableHours} onChange={this.onBillableHoursChange} />}
                                 />
                             </Flex.Item>
                             <Flex.Item size="size.half">
                                 <Form.Field
-                                    label={this.localize("step1NonBillableHoursLabel")}
+                                    label={this.localize("step1MonthlyNonBillableHoursLabel")}
                                     name="nonBillableHours"
                                     id="non-billable-hours"
-                                    control={<Input type="number" min={0} fluid placeholder={this.localize("step1NonBillableHoursPlaceholder")} value={this.state.project.nonBillableHours} onChange={this.onNonBillableHoursChange} />}
+                                    control={<Input type="number" min={0} fluid placeholder={this.localize("step1MonthlyNonBillableHoursLabel")} value={this.state.project.nonBillableHours} onChange={this.onNonBillableHoursChange} />}
                                 />
                             </Flex.Item>
                         </Flex>
@@ -297,7 +297,6 @@ class Step1 extends React.Component<IStep1Props, IStep1State> {
                                         theme={this.state.theme}
                                         selectedDate={this.state.project.startDate!}
                                         minDate={undefined}
-                                        maxDate={undefined}
                                         onDateSelect={this.setStartDate}
                                         disableSelectionForPastDate={false}
                                     />}
@@ -312,7 +311,6 @@ class Step1 extends React.Component<IStep1Props, IStep1State> {
                                     control={<DatePickerWrapper
                                         theme={this.state.theme}
                                         minDate={this.state.project.startDate}
-                                        maxDate={undefined}
                                         selectedDate={this.state.project.endDate}
                                         onDateSelect={this.setEndDate}
                                         disableSelectionForPastDate={false}

@@ -14,7 +14,6 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Extensions.Logging;
     using Microsoft.Teams.Apps.Timesheet.Authentication;
-    using Microsoft.Teams.Apps.Timesheet.Common.Extensions;
     using Microsoft.Teams.Apps.Timesheet.Common.Models;
     using Microsoft.Teams.Apps.Timesheet.Helpers;
     using Microsoft.Teams.Apps.Timesheet.Models;
@@ -72,49 +71,12 @@ namespace Microsoft.Teams.Apps.Timesheet.Controllers
         }
 
         /// <summary>
-        /// Get user profiles by user object Ids.
-        /// </summary>
-        /// <param name="userIds">List of user object Ids.</param>
-        /// <returns>List of users profile.</returns>
-        [HttpPost]
-        public async Task<IActionResult> GetUsersProfileAsync([FromBody] IEnumerable<string> userIds)
-        {
-            this.RecordEvent("Get users profiles- The HTTP call to GET users profiles has been initiated.", RequestType.Initiated);
-
-            if (userIds.IsNullOrEmpty())
-            {
-                this.RecordEvent("Get users profiles- The HTTP call to GET users profiles has been failed.", RequestType.Failed);
-                this.logger.LogError("User Id list cannot be null or empty.");
-                return this.BadRequest(new { message = "User Id list cannot be null or empty." });
-            }
-
-            try
-            {
-                var userProfiles = await this.userGraphService.GetUsersAsync(userIds);
-                this.RecordEvent("Get users profiles- The HTTP call to GET users profiles has been succeeded.", RequestType.Succeeded);
-
-                if (userProfiles != null)
-                {
-                    return this.Ok(userProfiles.Select(user => new UserDTO { DisplayName = user.Value.DisplayName, Id = user.Value.Id }));
-                }
-
-                return this.NoContent();
-            }
-            catch (Exception ex)
-            {
-                this.RecordEvent("Get users profiles- The HTTP call to GET users profiles has been failed.", RequestType.Failed);
-                this.logger.LogError(ex, "Error occurred while fetching users profiles.");
-                throw;
-            }
-        }
-
-        /// <summary>
         /// Get direct reportees for logged-in user.
         /// </summary>
         /// <param name="search">Search text for querying over display name and email of user.</param>
         /// <returns>Returns list of users who report to logged-in user.</returns>
         [HttpGet("me/reportees")]
-        public async Task<IActionResult> GetMyReporteesAsync([FromQuery] string search)
+        public async Task<IActionResult> GetReporteesAsync([FromQuery] string search)
         {
             this.RecordEvent("Get reportees- The HTTP GET call to get reportees has been initiated.", RequestType.Initiated);
 

@@ -23,7 +23,6 @@ interface IDatePickerProps {
     onDateSelect: (startDate: Date) => void,
     theme: string,
     minDate: Date | undefined;
-    maxDate: Date | undefined;
     disableSelectionForPastDate: boolean
 }
 
@@ -48,7 +47,6 @@ const DatePickerWrapper: React.FC<IDatePickerProps> = props => {
 
     const [selectedDate, setDate] = useState<Date | undefined>(props.selectedDate);
     const [minDate, setMinDate] = useState<Date | undefined>(props.minDate);
-    const [maxDate, setMaxDate] = useState<Date | undefined>(props.maxDate);
 
     React.useEffect(() => {
         setDate(props.selectedDate);
@@ -57,18 +55,6 @@ const DatePickerWrapper: React.FC<IDatePickerProps> = props => {
     React.useEffect(() => {
         setMinDate(props.minDate);
     }, [props.minDate]);
-
-    React.useEffect(() => {
-        setMaxDate(props.maxDate);
-    }, [props.maxDate]);
-
-    /**
-    * Format date to show in date picker.
-    * @param date Selected date.
-    */
-    const formatDate = (date: Date | null | undefined): string => {
-        return moment(date).format('LL')
-    };
 
     /**
     * Handle change event for cycle start date picker.
@@ -89,12 +75,10 @@ const DatePickerWrapper: React.FC<IDatePickerProps> = props => {
                         label={''}
                         showMonthPickerAsOverlay={true}
                         minDate={minDate}
-                        maxDate={maxDate}
                         isMonthPickerVisible={true}
                         value={selectedDate}
                         onSelectDate={onSelectStartDate}
                         disabled={props.disableSelectionForPastDate}
-                        formatDate={formatDate}
                     />
                 </Customizer>
             </Fabric>
